@@ -2,3 +2,5 @@
 .vagrant/
 *.egg-info/
 dist/
+.cache/
+.tox/
