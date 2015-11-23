@@ -1,3 +1,13 @@
+"""
+    aiorq.queue
+    ~~~~~~~~~~~
+
+    This module define asyncio compatible job queue.
+
+    :copyright: (c) 2015 by Artem Malyshev.
+    :license: LGPL-3, see LICENSE for more details.
+"""
+
 class Queue:
     """asyncio job queue."""
 
