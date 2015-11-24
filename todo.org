@@ -1,0 +1,48 @@
+* queue creation
+
+  #+BEGIN_SRC python
+    q = yield from Queue('high')
+  #+END_SRC
+
+* enqueuing
+
+  #+BEGIN_SRC python
+    job = yield from q.enqueue(count_words_at_url, 'http://nvie.com')
+    job = yield from q.enqueue_call(func=count_words_at_url,
+                                    args=('http://nvie.com',),
+                                    timeout=30)
+  #+END_SRC
+
+* result obtaining
+
+  #+BEGIN_SRC python
+    result = yield from job.result
+  #+END_SRC
+
+* queue length
+
+  #+BEGIN_SRC python
+    len(q)                          # Raise user error
+    yield from q.length             # Getting number of jobs in the queue
+  #+END_SRC
+
+* retrieving jobs
+
+  #+BEGIN_SRC python
+    queued_job_ids = yield from q.job_ids             # Gets a list of job IDs from the queue
+    queued_jobs = yield from q.jobs                   # Gets a list of enqueued job instances
+    job = yield from q.fetch_job('my_id')             # Returns job having ID "my_id"
+  #+END_SRC
+
+* @job decorator
+
+  #+BEGIN_SRC python
+    job = yield from add.delay(3, 4)
+  #+END_SRC
+
+* job dependencies
+
+  #+BEGIN_SRC python
+    report_job = yield from q.enqueue(generate_report)
+    yield from q.enqueue(send_report, depends_on=report_job)
+  #+END_SRC
