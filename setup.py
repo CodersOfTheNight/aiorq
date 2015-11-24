@@ -8,4 +8,5 @@ setup(
     license='LGPL-3',
     author='Artem Malyshev',
     author_email='proofit404@gmail.com',
-    packages=find_packages(exclude=['tests']))
+    packages=find_packages(exclude=['tests']),
+    install_requires=['rq', 'aioredis'])
