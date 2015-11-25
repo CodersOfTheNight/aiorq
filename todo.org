@@ -1,7 +1,8 @@
 * queue creation
 
   #+BEGIN_SRC python
-    q = yield from Queue('high')
+    connection = yield from aioredis.create_redis(('localhost', 6379))
+    q = Queue('high', connection=connection)
   #+END_SRC
 
 * enqueuing
