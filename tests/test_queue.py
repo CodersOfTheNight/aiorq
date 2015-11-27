@@ -13,3 +13,15 @@ def test_create_named_queue():
 
     q = Queue('my-queue')
     assert q.name == 'my-queue'
+
+
+def test_equality():
+    """Mathematical equality of queues."""
+
+    q1 = Queue('foo')
+    q2 = Queue('foo')
+    q3 = Queue('bar')
+    assert q1 == q2
+    assert q2 == q1
+    assert q1 != q3
+    assert q2 != q3

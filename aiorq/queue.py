@@ -14,3 +14,7 @@ class Queue:
     def __init__(self, name='default'):
 
         self.name = name
+
+    def __eq__(self, other):
+
+        return self.name == other.name
