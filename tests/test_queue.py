@@ -1,4 +1,5 @@
 from aiorq import Queue
+from aiorq.testing import async_test
 
 
 def test_create_queue():
@@ -25,3 +26,16 @@ def test_equality():
     assert q2 == q1
     assert q1 != q3
     assert q2 != q3
+
+
+@async_test
+def test_empty_queue(redis):
+    """Emptying queues."""
+
+    q = Queue('example', connection=redis)
+    yield from redis.rpush('rq:queue:example', 'foo')
+    yield from redis.rpush('rq:queue:example', 'bar')
+    assert (yield from q.is_empty()) == False
+    yield from q.empty()
+    assert (yield from q.is_empty()) == True
+    assert (yield from redis.lpop('rq:queue:example')) is None
