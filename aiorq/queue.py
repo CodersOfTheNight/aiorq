@@ -10,6 +10,8 @@
 
 import asyncio
 
+from .connections import resolve_connection
+
 
 class Queue:
     """asyncio job queue."""
@@ -18,7 +20,7 @@ class Queue:
 
     def __init__(self, name='default', connection=None):
 
-        self.connection = connection
+        self.connection = resolve_connection(connection)
         prefix = self.redis_queue_namespace_prefix
         self.name = name
         self._key = '{0}{1}'.format(prefix, name)

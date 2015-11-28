@@ -2,21 +2,24 @@ from aiorq import Queue
 from aiorq.testing import async_test
 
 
-def test_create_queue():
+@async_test
+def test_create_queue(*args):
     """We can create queue instance."""
 
     q = Queue()
     assert q.name == 'default'
 
 
-def test_create_named_queue():
+@async_test
+def test_create_named_queue(*args):
     """We can create named queue instance."""
 
     q = Queue('my-queue')
     assert q.name == 'my-queue'
 
 
-def test_equality():
+@async_test
+def test_equality(*args):
     """Mathematical equality of queues."""
 
     q1 = Queue('foo')
