@@ -26,7 +26,7 @@ def async_test(f):
             redis = yield from aioredis.create_redis(('localhost', 6379), loop=loop)
             push_connection(redis)
             try:
-                f(redis)
+                yield from asyncio.coroutine(f)(redis)
             finally:
                 yield from redis.flushdb()
                 connection = pop_connection()
