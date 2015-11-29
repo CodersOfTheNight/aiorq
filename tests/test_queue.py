@@ -3,7 +3,7 @@ from aiorq.testing import async_test
 
 
 @async_test
-def test_create_queue(*args):
+def test_create_queue(**kwargs):
     """We can create queue instance."""
 
     q = Queue()
@@ -11,7 +11,7 @@ def test_create_queue(*args):
 
 
 @async_test
-def test_create_named_queue(*args):
+def test_create_named_queue(**kwargs):
     """We can create named queue instance."""
 
     q = Queue('my-queue')
@@ -19,7 +19,7 @@ def test_create_named_queue(*args):
 
 
 @async_test
-def test_equality(*args):
+def test_equality(**kwargs):
     """Mathematical equality of queues."""
 
     q1 = Queue('foo')
@@ -32,7 +32,7 @@ def test_equality(*args):
 
 
 @async_test
-def test_empty_queue(redis):
+def test_empty_queue(redis, **kwargs):
     """Emptying queues."""
 
     q = Queue('example', connection=redis)

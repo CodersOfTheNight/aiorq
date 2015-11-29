@@ -33,7 +33,7 @@ def async_test(f):
             redis = yield from find_connection(loop)
             push_connection(redis)
             try:
-                yield from asyncio.coroutine(f)(redis)
+                yield from asyncio.coroutine(f)(redis=redis, loop=loop)
             finally:
                 yield from redis.flushdb()
                 connection = pop_connection()

@@ -13,7 +13,7 @@ def test_async_test_on_function():
     """Asynchronous test wraps regular function."""
 
     @async_test
-    def f(*args):
+    def f(**kwargs):
         raise CatchMe
 
     with pytest.raises(CatchMe):
@@ -24,7 +24,7 @@ def test_async_test_on_generator():
     """Asynchronous test wraps generator."""
 
     @async_test
-    def g(*args):
+    def g(**kwargs):
         yield
         raise CatchMe
 
