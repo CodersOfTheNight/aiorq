@@ -8,10 +8,10 @@
     :license: LGPL-3, see LICENSE for more details.
 """
 
-from .connections import (pop_connection, push_connection,
+from .connections import (Connection, pop_connection, push_connection,
                           get_current_connection)
 from .queue import Queue
 
 
-__all__ = ['pop_connection', 'push_connection',
+__all__ = ['Connection', 'pop_connection', 'push_connection',
            'get_current_connection', 'Queue']

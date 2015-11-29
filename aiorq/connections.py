@@ -8,8 +8,35 @@
     :license: LGPL-3, see LICENSE for more details.
 """
 
+from contextlib import contextmanager
+
 from rq.connections import NoRedisConnectionException
 from rq.local import LocalStack
+
+
+class Connection:
+    """All queues created in the inner block will use this connection."""
+
+    def __init__(self, connection):
+
+        self.connection = connection
+
+    def __iter__(self):
+
+        # Make yield from Connection() works.
+        if False:
+            yield
+        return _ConnectionContextManager(self.connection)
+
+
+@contextmanager
+def _ConnectionContextManager(connection):
+
+    push_connection(connection)
+    try:
+        yield
+    finally:
+        pop_connection()
 
 
 def pop_connection():
