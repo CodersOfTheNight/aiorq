@@ -38,7 +38,7 @@ def test_empty_queue(redis, **kwargs):
     q = Queue('example', connection=redis)
     yield from redis.rpush('rq:queue:example', 'foo')
     yield from redis.rpush('rq:queue:example', 'bar')
-    assert (yield from q.is_empty()) == False
+    assert not (yield from q.is_empty())
     yield from q.empty()
-    assert (yield from q.is_empty()) == True
+    assert (yield from q.is_empty())
     assert (yield from redis.lpop('rq:queue:example')) is None
