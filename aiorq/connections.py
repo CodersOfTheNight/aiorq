@@ -10,6 +10,7 @@
 
 from contextlib import contextmanager
 
+from aioredis import create_redis
 from rq.connections import NoRedisConnectionException
 from rq.local import LocalStack
 
@@ -17,15 +18,16 @@ from rq.local import LocalStack
 class Connection:
     """All queues created in the inner block will use this connection."""
 
-    def __init__(self, connection):
+    def __init__(self, connection=None, **kwargs):
 
         self.connection = connection
+        self.kwargs = kwargs
 
     def __iter__(self):
 
         # Make yield from Connection() works.
-        if False:
-            yield
+        if self.connection is None:
+            self.connection = yield from create_redis(**self.kwargs)
         return _ConnectionContextManager(self.connection)
 
 
