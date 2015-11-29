@@ -16,6 +16,13 @@ import aioredis
 from aiorq import pop_connection, push_connection
 
 
+@asyncio.coroutine
+def find_connection(loop):
+    """Get test redis connection."""
+
+    return (yield from aioredis.create_redis(('localhost', 6379), loop=loop))
+
+
 def async_test(f):
     """Run asynchronous tests inside event loop as coroutines."""
 
@@ -23,7 +30,7 @@ def async_test(f):
 
         @asyncio.coroutine
         def coroutine(loop):
-            redis = yield from aioredis.create_redis(('localhost', 6379), loop=loop)
+            redis = yield from find_connection(loop)
             push_connection(redis)
             try:
                 yield from asyncio.coroutine(f)(redis)
