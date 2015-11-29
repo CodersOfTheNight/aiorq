@@ -25,7 +25,8 @@ def test_async_test_on_generator():
 
     @async_test
     def g(**kwargs):
-        yield
+        if False:
+            yield
         raise CatchMe
 
     with pytest.raises(CatchMe):
