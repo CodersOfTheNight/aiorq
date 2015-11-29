@@ -11,16 +11,16 @@
 import asyncio
 import gc
 
-import aioredis
+from aioredis import create_redis
 
-from aiorq import pop_connection, push_connection
+from . import pop_connection, push_connection
 
 
 @asyncio.coroutine
 def find_connection(loop):
     """Get test redis connection."""
 
-    return (yield from aioredis.create_redis(('localhost', 6379), loop=loop))
+    return (yield from create_redis(('localhost', 6379), loop=loop))
 
 
 def async_test(f):
