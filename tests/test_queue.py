@@ -1,4 +1,5 @@
 from aiorq import Queue
+from aiorq.job import Job
 from aiorq.testing import async_test
 
 
@@ -42,3 +43,14 @@ def test_empty_queue(redis, **kwargs):
     yield from q.empty()
     assert (yield from q.is_empty())
     assert (yield from redis.lpop('rq:queue:example')) is None
+
+
+@async_test
+def test_empty_remove_jobs(redis, **kwargs):
+    """Emptying a queue deletes the associated job objects."""
+
+    q = Queue('example')
+    job = yield from q.enqueue(lambda x: x)
+    assert (yield from Job.exists(job.id))
+    yield from q.empty()
+    assert not (yield from Job.exists(job.id))
