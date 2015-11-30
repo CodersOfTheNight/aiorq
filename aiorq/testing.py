@@ -36,13 +36,16 @@ def async_test(f):
             push_connection(redis)
             try:
                 yield from asyncio.coroutine(f)(redis=redis, loop=loop)
-            finally:
-                yield from redis.flushdb()
+            except Exception:
+                raise
+            else:
                 connection = pop_connection()
-                release_local(_connection_stack)
                 assert connection == redis, (
                     'Wow, something really nasty happened to the '
                     'Redis connection stack. Check your setup.')
+            finally:
+                yield from redis.flushdb()
+                release_local(_connection_stack)
 
         assert not len(_connection_stack), \
             'Test require empty connection stack'
