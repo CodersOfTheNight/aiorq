@@ -1,10 +1,3 @@
-* queue creation
-
-  #+BEGIN_SRC python
-    connection = yield from aioredis.create_redis(('localhost', 6379))
-    q = Queue('high', connection=connection)
-  #+END_SRC
-
 * enqueuing
 
   #+BEGIN_SRC python
@@ -47,7 +40,3 @@
     report_job = yield from q.enqueue(generate_report)
     yield from q.enqueue(send_report, depends_on=report_job)
   #+END_SRC
-
-* Per module targets
-
-** connections.use_connection
