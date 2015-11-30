@@ -12,8 +12,10 @@ import asyncio
 import gc
 
 from aioredis import create_redis
+from rq.local import release_local
 
 from . import pop_connection, push_connection
+from .connections import _connection_stack
 
 
 @asyncio.coroutine
@@ -37,10 +39,13 @@ def async_test(f):
             finally:
                 yield from redis.flushdb()
                 connection = pop_connection()
+                release_local(_connection_stack)
                 assert connection == redis, (
                     'Wow, something really nasty happened to the '
                     'Redis connection stack. Check your setup.')
 
+        assert not len(_connection_stack), \
+            'Test require empty connection stack'
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(None)
         loop.run_until_complete(coroutine(loop))
