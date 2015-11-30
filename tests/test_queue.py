@@ -54,3 +54,13 @@ def test_empty_remove_jobs(redis, **kwargs):
     assert (yield from Job.exists(job.id))
     yield from q.empty()
     assert not (yield from Job.exists(job.id))
+
+
+@async_test
+def test_queue_is_empty(redis, **kwargs):
+    """Detecting empty queues."""
+
+    q = Queue('example')
+    assert (yield from q.is_empty())
+    yield from redis.rpush('rq:queue:example', 'sentinel message')
+    assert not (yield from q.is_empty())
