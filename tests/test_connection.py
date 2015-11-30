@@ -31,9 +31,10 @@ def test_connection_stacking(redis, loop):
 def test_implicit_connection_stacking(redis, loop):
     """Connection stacking with implicit connection creation."""
 
-    with (yield from Connection(address=('localhost', 6379), loop=loop)):
+    kwargs = dict(address=('localhost', 6379), loop=loop)
+    with (yield from Connection(**kwargs)):
         q1 = Queue()
-        with (yield from Connection(address=('localhost', 6379), loop=loop)):
+        with (yield from Connection(**kwargs)):
             q2 = Queue()
 
     assert q1.connection != q2.connection
