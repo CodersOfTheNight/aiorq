@@ -38,7 +38,10 @@ def _ConnectionContextManager(connection):
     try:
         yield
     finally:
-        pop_connection()
+        popped = pop_connection()
+        assert popped == connection, \
+            'Unexpected Redis connection was popped off the stack. ' \
+            'Check your Redis connection setup.'
 
 
 def pop_connection():
