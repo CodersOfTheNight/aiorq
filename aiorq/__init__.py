@@ -9,9 +9,9 @@
 """
 
 from .connections import (Connection, pop_connection, push_connection,
-                          get_current_connection)
+                          get_current_connection, use_connection)
 from .queue import Queue
 
 
 __all__ = ['Connection', 'pop_connection', 'push_connection',
-           'get_current_connection', 'Queue']
+           'get_current_connection', 'use_connection', 'Queue']

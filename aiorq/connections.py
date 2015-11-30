@@ -8,11 +8,12 @@
     :license: LGPL-3, see LICENSE for more details.
 """
 
+import asyncio
 from contextlib import contextmanager
 
 from aioredis import create_redis
 from rq.connections import NoRedisConnectionException
-from rq.local import LocalStack
+from rq.local import LocalStack, release_local
 
 
 class Connection:
@@ -54,6 +55,21 @@ def push_connection(redis):
     """Pushes the given connection on the stack."""
 
     _connection_stack.push(redis)
+
+
+@asyncio.coroutine
+def use_connection(redis=None, **kwargs):
+    """Clears the stack and uses the given connection.  Protects against
+    mixed use of use_connection() and stacked connection contexts.
+    """
+
+    assert len(_connection_stack) <= 1, \
+        'You should not mix Connection contexts with use_connection()'
+    release_local(_connection_stack)
+
+    if redis is None:
+        redis = yield from create_redis(**kwargs)
+    push_connection(redis)
 
 
 def get_current_connection():
