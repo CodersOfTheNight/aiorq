@@ -2,7 +2,7 @@ import pytest
 
 from aiorq.job import Job
 from testing import async_test
-from fixtures import Number, some_calculation
+from fixtures import Number, some_calculation, say_hello
 
 
 @async_test
@@ -77,3 +77,15 @@ def test_create_instance_method_job(**kwargs):
     assert job.func == n.div
     assert job.instance == n
     assert job.args == (4,)
+
+
+@async_test
+def test_create_job_from_string_function(**kwargs):
+    """Creation of jobs using string specifier."""
+
+    job = Job.create(func='fixtures.say_hello', args=('World',))
+
+    # Job data is set
+    assert job.func == say_hello
+    assert not job.instance
+    assert job.args == ('World',)
