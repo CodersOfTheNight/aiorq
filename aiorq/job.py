@@ -90,13 +90,14 @@ class Job(SynchronousJob):
     def save(self, pipeline=None):
         """Persists the current job instance to its corresponding Redis key."""
 
-        # TODO: yield from if pipeline is none
         key = self.key
-        connection = pipeline
+        connection = pipeline if pipeline else self.connection
         fields = (field
                   for item_fields in self.to_dict().items()
                   for field in item_fields)
-        connection.hmset(key, *fields)
+        coroutine = connection.hmset(key, *fields)
+        if not pipeline:
+            yield from coroutine
         # TODO: don't pass connection if pipeline is none
         yield from self.cleanup(self.ttl, pipeline=connection)
 

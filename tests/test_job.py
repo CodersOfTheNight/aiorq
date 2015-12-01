@@ -127,3 +127,19 @@ def test_data_property_sets_job_properties(**kwargs):
     assert not job.instance
     assert job.args == (1, 2, 3)
     assert job.kwargs == {'bar': 'qux'}
+
+
+@async_test
+def test_save(redis, **kwargs):
+    """Storing jobs."""
+
+    job = Job.create(func=some_calculation, args=(3, 4), kwargs=dict(z=2))
+
+    # Saving creates a Redis hash
+    assert not (yield from redis.exists(job.key))
+    yield from job.save()
+    assert (yield from redis.type(job.key)) == b'hash'
+
+    # Saving writes pickled job data
+    unpickled_data = loads((yield from redis.hget(job.key, 'data')))
+    assert unpickled_data[0] == 'fixtures.some_calculation'
