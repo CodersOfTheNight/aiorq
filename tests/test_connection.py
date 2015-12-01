@@ -3,7 +3,7 @@ import pytest
 from aiorq import (Connection, use_connection, push_connection,
                    get_current_connection, Queue)
 from aiorq.connections import _connection_stack
-from aiorq.testing import async_test, find_connection
+from testing import async_test, find_connection
 
 
 @async_test

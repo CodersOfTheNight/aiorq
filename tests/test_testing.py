@@ -1,6 +1,6 @@
 import pytest
 
-from aiorq.testing import async_test
+from testing import async_test
 
 
 class CatchMe(Exception):

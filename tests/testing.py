@@ -1,21 +1,11 @@
-"""
-    aiorq.testing
-    ~~~~~~~~~~~~~
-
-    This module implements testing facility for aiorq applications.
-
-    :copyright: (c) 2015 by Artem Malyshev.
-    :license: LGPL-3, see LICENSE for more details.
-"""
-
 import asyncio
 import gc
 
 from aioredis import create_redis
 from rq.local import release_local
 
-from . import pop_connection, push_connection
-from .connections import _connection_stack
+from aiorq import pop_connection, push_connection
+from aiorq.connections import _connection_stack
 
 
 @asyncio.coroutine

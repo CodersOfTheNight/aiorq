@@ -1,6 +1,6 @@
 from aiorq import Queue
 from aiorq.job import Job
-from aiorq.testing import async_test
+from testing import async_test
 
 
 @async_test

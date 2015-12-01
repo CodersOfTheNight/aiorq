@@ -1,29 +1,8 @@
 import pytest
 
 from aiorq.job import Job
-from aiorq.testing import async_test
-
-
-# Fixtures.
-
-
-def some_calculation(x, y, z=1):
-
-    return x * y / z
-
-
-class Number:
-
-    def __init__(self, value):
-
-        self.value = value
-
-    def div(self, y):
-
-        return self.value / y
-
-
-# Tests.
+from testing import async_test
+from fixtures import Number, some_calculation
 
 
 @async_test
