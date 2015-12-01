@@ -12,6 +12,17 @@ def some_calculation(x, y, z=1):
     return x * y / z
 
 
+class Number:
+
+    def __init__(self, value):
+
+        self.value = value
+
+    def div(self, y):
+
+        return self.value / y
+
+
 # Tests.
 
 
@@ -74,3 +85,16 @@ def test_create_typical_job(**kwargs):
     assert not job.origin
     assert not job.enqueued_at
     assert not (yield from job.result)
+
+
+@async_test
+def test_create_instance_method_job(**kwargs):
+    """Creation of jobs for instance methods."""
+
+    n = Number(2)
+    job = Job.create(func=n.div, args=(4,))
+
+    # Job data is set
+    assert job.func == n.div
+    assert job.instance == n
+    assert job.args == (4,)
