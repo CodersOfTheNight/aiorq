@@ -166,3 +166,12 @@ def test_fetch(redis, **kwargs):
     assert job.args == (3, 4)
     assert job.kwargs == dict(z=2)
     assert job.created_at == datetime(2012, 2, 7, 22, 13, 24)
+
+
+@async_test
+def test_persistence_of_empty_jobs(**kwargs):
+    """Storing empty jobs."""
+
+    job = Job()
+    with pytest.raises(ValueError):
+        yield from job.save()
