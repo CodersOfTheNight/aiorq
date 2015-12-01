@@ -1,6 +1,6 @@
 import pytest
 
-from aiorq.job import Job
+from aiorq.job import Job, loads
 from testing import async_test
 from fixtures import Number, some_calculation, say_hello, CallableObject
 
@@ -100,3 +100,17 @@ def test_create_job_from_callable_class(**kwargs):
 
     assert job.func == kallable.__call__
     assert job.instance == kallable
+
+
+@async_test
+def test_job_properties_set_data_property(**kwargs):
+    """Data property gets derived from the job tuple."""
+
+    job = Job()
+    job.func_name = 'foo'
+    fname, instance, args, kwargs = loads(job.data)
+
+    assert fname == job.func_name
+    assert not instance
+    assert args == ()
+    assert kwargs == {}
