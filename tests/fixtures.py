@@ -19,3 +19,10 @@ class Number:
     def div(self, y):
 
         return self.value / y
+
+
+class CallableObject(object):
+
+    def __call__(self):
+
+        return "I'm callable"

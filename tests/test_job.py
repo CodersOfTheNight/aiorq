@@ -2,7 +2,7 @@ import pytest
 
 from aiorq.job import Job
 from testing import async_test
-from fixtures import Number, some_calculation, say_hello
+from fixtures import Number, some_calculation, say_hello, CallableObject
 
 
 @async_test
@@ -89,3 +89,14 @@ def test_create_job_from_string_function(**kwargs):
     assert job.func == say_hello
     assert not job.instance
     assert job.args == ('World',)
+
+
+@async_test
+def test_create_job_from_callable_class(**kwargs):
+    """Creation of jobs using a callable class specifier."""
+
+    kallable = CallableObject()
+    job = Job.create(func=kallable)
+
+    assert job.func == kallable.__call__
+    assert job.instance == kallable
