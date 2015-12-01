@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import pytest
 
 from aiorq.job import Job, loads, dumps
@@ -143,3 +145,24 @@ def test_save(redis, **kwargs):
     # Saving writes pickled job data
     unpickled_data = loads((yield from redis.hget(job.key, 'data')))
     assert unpickled_data[0] == 'fixtures.some_calculation'
+
+
+@async_test
+def test_fetch(redis, **kwargs):
+    """Fetching jobs."""
+
+    yield from redis.hset('rq:job:some_id', 'data',
+                          "(S'fixtures.some_calculation'\n"
+                          "N(I3\nI4\nt(dp1\nS'z'\nI2\nstp2\n.")
+    yield from redis.hset('rq:job:some_id', 'created_at',
+                          '2012-02-07T22:13:24Z')
+
+    # Fetch returns a job
+    job = yield from Job.fetch('some_id')
+
+    assert job.id == 'some_id'
+    assert job.func_name == 'fixtures.some_calculation'
+    assert not job.instance
+    assert job.args == (3, 4)
+    assert job.kwargs == dict(z=2)
+    assert job.created_at == datetime(2012, 2, 7, 22, 13, 24)

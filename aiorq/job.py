@@ -10,9 +10,11 @@
 
 import asyncio
 
-from rq.job import Job as SynchronousJob, UNEVALUATED, loads
+from rq.compat import as_text, decode_redis_hash
+from rq.exceptions import NoSuchJobError
+from rq.job import Job as SynchronousJob, UNEVALUATED, loads, unpickle
 from rq.job import dumps        # noqa
-from rq.utils import utcnow
+from rq.utils import utcnow, utcparse
 
 from .connections import resolve_connection
 
@@ -36,6 +38,17 @@ class Job(SynchronousJob):
 
         conn = resolve_connection(connection)
         return (yield from conn.exists(cls.key_for(job_id)))
+
+    @classmethod
+    @asyncio.coroutine
+    def fetch(cls, id, connection=None):
+        """Fetches a persisted job from its corresponding Redis key and
+        instantiates it.
+        """
+
+        job = cls(id, connection=connection)
+        yield from job.refresh()
+        return job
 
     def __init__(self, id=None, connection=None):
 
@@ -85,6 +98,46 @@ class Job(SynchronousJob):
             if rv is not None:
                 self._result = loads(rv)
         return self._result
+
+    # Persistence
+    @asyncio.coroutine
+    def refresh(self):
+        """Overwrite the current instance's properties with the values in the
+        corresponding Redis key.
+
+        Will raise a NoSuchJobError if no corresponding Redis key
+        exists.
+        """
+
+        key = self.key
+        obj = decode_redis_hash((yield from self.connection.hgetall(key)))
+        if len(obj) == 0:
+            raise NoSuchJobError('No such job: {0}'.format(key))
+
+        to_date = lambda text: utcparse(as_text(text)) if text else None
+
+        try:
+            self.data = obj['data']
+        except KeyError:
+            raise NoSuchJobError('Unexpected job format: {0}'.format(obj))
+
+        self.created_at = to_date(obj.get('created_at'))
+        self.origin = as_text(obj.get('origin'))
+        self.description = as_text(obj.get('description'))
+        self.enqueued_at = to_date(obj.get('enqueued_at'))
+        self.started_at = to_date(obj.get('started_at'))
+        self.ended_at = to_date(obj.get('ended_at'))
+        self._result = (unpickle(obj.get('result'))
+                        if obj.get('result') else None)
+        self.exc_info = obj.get('exc_info')
+        self.timeout = int(obj.get('timeout')) if obj.get('timeout') else None
+        self.result_ttl = (int(obj.get('result_ttl'))
+                           if obj.get('result_ttl') else None)
+        self._status = as_text(obj.get('status')
+                               if obj.get('status') else None)
+        self._dependency_id = as_text(obj.get('dependency_id', None))
+        self.ttl = int(obj.get('ttl')) if obj.get('ttl') else None
+        self.meta = unpickle(obj.get('meta')) if obj.get('meta') else {}
 
     @asyncio.coroutine
     def save(self, pipeline=None):
