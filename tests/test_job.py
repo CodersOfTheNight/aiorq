@@ -4,6 +4,17 @@ from aiorq.job import Job
 from aiorq.testing import async_test
 
 
+# Fixtures.
+
+
+def some_calculation(x, y, z=1):
+
+    return x * y / z
+
+
+# Tests.
+
+
 @async_test
 def test_unicode(**kwargs):
     """Unicode in job description."""
@@ -40,3 +51,26 @@ def test_create_empty_job(**kwargs):
         job.args
     with pytest.raises(ValueError):
         job.kwargs
+
+
+@async_test
+def test_create_typical_job(**kwargs):
+    """Creation of jobs for function calls."""
+    job = Job.create(func=some_calculation,
+                     args=(3, 4), kwargs=dict(z=2))
+
+    # Jobs have a random UUID
+    assert job.id
+    assert job.created_at
+    assert job.description
+    assert not job.instance
+
+    # Job data is set...
+    assert job.func == some_calculation
+    assert job.args == (3, 4)
+    assert job.kwargs == {'z': 2}
+
+    # ...but metadata is not
+    assert not job.origin
+    assert not job.enqueued_at
+    assert not (yield from job.result)
