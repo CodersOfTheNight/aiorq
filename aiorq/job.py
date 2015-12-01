@@ -10,7 +10,7 @@
 
 import asyncio
 
-from rq.job import Job as SynchronousJob, UNEVALUATED
+from rq.job import Job as SynchronousJob, UNEVALUATED, loads
 from rq.utils import utcnow
 
 from .connections import resolve_connection
@@ -59,6 +59,31 @@ class Job(SynchronousJob):
         self._status = None
         self._dependency_id = None
         self.meta = {}
+
+    @property
+    @asyncio.coroutine
+    def result(self):
+        """Returns the return value of the job.
+
+        Initially, right after enqueueing a job, the return value will be
+        None.  But when the job has been executed, and had a return value or
+        exception, this will return that value or exception.
+
+        Note that, when the job has no return value (i.e. returns None), the
+        ReadOnlyJob object is useless, as the result won't be written back to
+        Redis.
+
+        Also note that you cannot draw the conclusion that a job has _not_
+        been executed when its return value is None, since return values
+        written back to Redis will expire after a given amount of time (500
+        seconds by default).
+        """
+
+        if self._result is None:
+            rv = yield from self.connection.hget(self.key, 'result')
+            if rv is not None:
+                self._result = loads(rv)
+        return self._result
 
     @asyncio.coroutine
     def save(self, pipeline=None):
