@@ -1,6 +1,6 @@
 import pytest
 
-from aiorq.job import Job, loads
+from aiorq.job import Job, loads, dumps
 from testing import async_test
 from fixtures import Number, some_calculation, say_hello, CallableObject
 
@@ -114,3 +114,16 @@ def test_job_properties_set_data_property(**kwargs):
     assert not instance
     assert args == ()
     assert kwargs == {}
+
+
+@async_test
+def test_data_property_sets_job_properties(**kwargs):
+    """Job tuple gets derived lazily from data property."""
+
+    job = Job()
+    job.data = dumps(('foo', None, (1, 2, 3), {'bar': 'qux'}))
+
+    assert job.func_name == 'foo'
+    assert not job.instance
+    assert job.args == (1, 2, 3)
+    assert job.kwargs == {'bar': 'qux'}

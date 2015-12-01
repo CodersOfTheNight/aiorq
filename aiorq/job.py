@@ -11,6 +11,7 @@
 import asyncio
 
 from rq.job import Job as SynchronousJob, UNEVALUATED, loads
+from rq.job import dumps        # noqa
 from rq.utils import utcnow
 
 from .connections import resolve_connection
