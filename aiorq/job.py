@@ -11,12 +11,12 @@
 import asyncio
 
 from rq.compat import as_text, decode_redis_hash
-from rq.exceptions import NoSuchJobError
 from rq.job import Job as SynchronousJob, UNEVALUATED, loads, unpickle
 from rq.job import dumps        # noqa
 from rq.utils import utcnow, utcparse
 
 from .connections import resolve_connection
+from .exceptions import NoSuchJobError
 
 
 class Job(SynchronousJob):

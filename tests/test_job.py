@@ -4,6 +4,7 @@ import pytest
 from rq.utils import utcformat
 
 from aiorq.job import Job, loads, dumps
+from aiorq.exceptions import NoSuchJobError
 from testing import async_test
 from fixtures import Number, some_calculation, say_hello, CallableObject
 from helpers import strip_microseconds
@@ -232,3 +233,11 @@ def test_store_then_fetch(**kwargs):
 
     # Mathematical equation
     assert job == job2
+
+
+@async_test
+def test_fetching_can_fail(**kwargs):
+    """Fetching fails for non-existing jobs."""
+
+    with pytest.raises(NoSuchJobError):
+        yield from Job.fetch('b4a44d44-da16-4620-90a6-798e8cd72ca0')
