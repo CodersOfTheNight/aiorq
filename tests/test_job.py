@@ -216,3 +216,19 @@ def test_persistence_of_parent_job(**kwargs):
 
     assert stored_job._dependency_id == parent_job.id
     assert (yield from stored_job.dependency) == parent_job
+
+
+@async_test
+def test_store_then_fetch(**kwargs):
+    """Store, then fetch."""
+
+    job = Job.create(func=some_calculation, args=(3, 4), kwargs=dict(z=2))
+    yield from job.save()
+
+    job2 = yield from Job.fetch(job.id)
+    assert job.func == job2.func
+    assert job.args == job2.args
+    assert job.kwargs == job2.kwargs
+
+    # Mathematical equation
+    assert job == job2
