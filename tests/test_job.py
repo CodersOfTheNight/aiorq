@@ -3,6 +3,7 @@ from datetime import datetime
 import pytest
 from rq.utils import utcformat
 
+from aiorq import get_current_job
 from aiorq.job import Job, loads, dumps
 from aiorq.exceptions import NoSuchJobError, UnpickleError
 from testing import async_test
@@ -324,3 +325,10 @@ def test_description_is_persisted(redis, **kwargs):
     yield from job.save()
     yield from Job.fetch(job.id, connection=redis)
     assert job.description == "fixtures.say_hello('Lionel')"
+
+
+@async_test
+def test_job_access_outside_job_fails(**kwargs):
+    """The current job is accessible only within a job context."""
+
+    assert not (yield from get_current_job())
