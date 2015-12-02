@@ -277,3 +277,18 @@ def test_job_is_unimportable(redis, **kwargs):
     yield from job.refresh()
     with pytest.raises(AttributeError):
         job.func  # accessing the func property should fail
+
+
+@async_test
+def test_custom_meta_is_persisted(redis, **kwargs):
+    """Additional meta data on jobs are stored persisted correctly."""
+
+    job = Job.create(func=say_hello, args=('Lionel',))
+    job.meta['foo'] = 'bar'
+    yield from job.save()
+
+    raw_data = yield from redis.hget(job.key, 'meta')
+    assert loads(raw_data)['foo'] == 'bar'
+
+    job2 = yield from Job.fetch(job.id)
+    assert job2.meta['foo'] == 'bar'
