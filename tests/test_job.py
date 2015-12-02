@@ -1,10 +1,12 @@
 from datetime import datetime
 
 import pytest
+from rq.utils import utcformat
 
 from aiorq.job import Job, loads, dumps
 from testing import async_test
 from fixtures import Number, some_calculation, say_hello, CallableObject
+from helpers import strip_microseconds
 
 
 @async_test
@@ -175,3 +177,20 @@ def test_persistence_of_empty_jobs(**kwargs):
     job = Job()
     with pytest.raises(ValueError):
         yield from job.save()
+
+
+@async_test
+def test_persistence_of_typical_jobs(redis, **kwargs):
+    """Storing typical jobs."""
+
+    job = Job.create(func=some_calculation, args=(3, 4), kwargs=dict(z=2))
+    yield from job.save()
+
+    expected_date = strip_microseconds(job.created_at)
+    stored_date = (yield from redis.hget(job.key, 'created_at')) \
+        .decode('utf-8')
+    assert stored_date == utcformat(expected_date)
+
+    # ... and no other keys are stored
+    assert sorted((yield from redis.hkeys(job.key))) \
+        == [b'created_at', b'data', b'description']
