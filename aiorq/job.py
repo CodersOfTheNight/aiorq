@@ -204,19 +204,23 @@ class Job(SynchronousJob):
         elif not ttl:
             return
         elif ttl > 0:
-            # TODO: yield from if pipeline is none
-            connection = pipeline
-            connection.expire(self.key, ttl)
+            connection = pipeline if pipeline else self.connection
+            coroutine = connection.expire(self.key, ttl)
+            if not pipeline:
+                yield from coroutine
 
     @asyncio.coroutine
     def delete(self, pipeline=None):
         """Cancels the job and deletes the job hash from Redis."""
 
         yield from self.cancel()
-        # TODO: yield from if pipeline is none
-        connection = pipeline
-        connection.delete(self.key)
-        connection.delete(self.dependents_key)
+        connection = pipeline if pipeline else self.connection
+        coroutine = connection.delete(self.key)
+        if not pipeline:
+            yield from coroutine
+        coroutine = connection.delete(self.dependents_key)
+        if not pipeline:
+            yield from coroutine
 
     # Job execution
     @asyncio.coroutine

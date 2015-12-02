@@ -408,3 +408,24 @@ def test_never_expire_during_execution(redis, **kwargs):
     assert job.get_ttl() == -1
     assert (yield from job.exists(job.id))
     assert (yield from job.result) == 'Done sleeping...'
+
+
+@async_test
+def test_cleanup(redis, **kwargs):
+    """Test that jobs and results are expired properly."""
+
+    job = Job.create(func=say_hello)
+    yield from job.save()
+
+    # Jobs with negative TTLs don't expire
+    yield from job.cleanup(ttl=-1)
+    assert (yield from redis.ttl(job.key)) == -1
+
+    # Jobs with positive TTLs are eventually deleted
+    yield from job.cleanup(ttl=100)
+    assert (yield from redis.ttl(job.key)) == 100
+
+    # Jobs with 0 TTL are immediately deleted
+    yield from job.cleanup(ttl=0)
+    with pytest.raises(NoSuchJobError):
+        yield from Job.fetch(job.id, redis)
