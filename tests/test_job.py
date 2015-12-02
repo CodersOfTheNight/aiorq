@@ -307,3 +307,20 @@ def test_result_ttl_is_persisted(redis, **kwargs):
     yield from job.save()
     yield from Job.fetch(job.id, connection=redis)
     assert not job.result_ttl
+
+
+@async_test
+def test_description_is_persisted(redis, **kwargs):
+    """Ensure that job's custom description is set properly."""
+
+    job = Job.create(func=say_hello, args=('Lionel',),
+                     description='Say hello!')
+    yield from job.save()
+    yield from Job.fetch(job.id, connection=redis)
+    assert job.description == 'Say hello!'
+
+    # Ensure job description is constructed from function call string
+    job = Job.create(func=say_hello, args=('Lionel',))
+    yield from job.save()
+    yield from Job.fetch(job.id, connection=redis)
+    assert job.description == "fixtures.say_hello('Lionel')"
