@@ -258,3 +258,22 @@ def test_fetching_unreadable_data(redis, **kwargs):
     for attr in ('func_name', 'instance', 'args', 'kwargs'):
         with pytest.raises(UnpickleError):
             getattr(job, attr)
+
+
+@async_test
+def test_job_is_unimportable(redis, **kwargs):
+    """Jobs that cannot be imported throw exception on access."""
+
+    job = Job.create(func=say_hello, args=('Lionel',))
+    yield from job.save()
+
+    # Now slightly modify the job to make it unimportable (this is
+    # equivalent to a worker not having the most up-to-date source
+    # code and unable to import the function)
+    data = yield from redis.hget(job.key, 'data')
+    unimportable_data = data.replace(b'say_hello', b'nay_hello')
+    yield from redis.hset(job.key, 'data', unimportable_data)
+
+    yield from job.refresh()
+    with pytest.raises(AttributeError):
+        job.func  # accessing the func property should fail
