@@ -116,10 +116,12 @@ class Queue:
           meaningful to the import context of the workers)
         """
 
-        return (yield from self.enqueue_call(func=f, args=args, kwargs=kwargs))
+        ttl = kwargs.pop('ttl', None)
+        return (yield from self.enqueue_call(
+            func=f, args=args, kwargs=kwargs, ttl=ttl))
 
     @asyncio.coroutine
-    def enqueue_call(self, func, args=None, kwargs=None):
+    def enqueue_call(self, func, args=None, kwargs=None, ttl=None):
         """Creates a job to represent the delayed function call and enqueues
         it.
 
@@ -129,7 +131,8 @@ class Queue:
         """
 
         job = self.job_class.create(
-            func, args=args, kwargs=kwargs, connection=self.connection)
+            func, args=args, kwargs=kwargs, connection=self.connection,
+            ttl=ttl)
         job = yield from self.enqueue_job(job)
         return job
 

@@ -381,3 +381,13 @@ def test_get_job_ttl(**kwargs):
     job = Job.create(func=say_hello)
     yield from job.save()
     assert not job.get_ttl()
+
+
+@async_test
+def test_ttl_via_enqueue(redis, **kwargs):
+    """Enqueue set custom TTL on job."""
+
+    ttl = 1
+    queue = Queue(connection=redis)
+    job = yield from queue.enqueue(say_hello, ttl=ttl)
+    assert job.get_ttl() == ttl
