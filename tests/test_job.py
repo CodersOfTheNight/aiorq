@@ -292,3 +292,18 @@ def test_custom_meta_is_persisted(redis, **kwargs):
 
     job2 = yield from Job.fetch(job.id)
     assert job2.meta['foo'] == 'bar'
+
+
+@async_test
+def test_result_ttl_is_persisted(redis, **kwargs):
+    """Ensure that job's result_ttl is set properly"""
+
+    job = Job.create(func=say_hello, args=('Lionel',), result_ttl=10)
+    yield from job.save()
+    yield from Job.fetch(job.id, connection=redis)
+    assert job.result_ttl == 10
+
+    job = Job.create(func=say_hello, args=('Lionel',))
+    yield from job.save()
+    yield from Job.fetch(job.id, connection=redis)
+    assert not job.result_ttl
