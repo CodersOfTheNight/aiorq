@@ -4,7 +4,7 @@ import pytest
 from rq.utils import utcformat
 
 from aiorq.job import Job, loads, dumps
-from aiorq.exceptions import NoSuchJobError
+from aiorq.exceptions import NoSuchJobError, UnpickleError
 from testing import async_test
 from fixtures import Number, some_calculation, say_hello, CallableObject
 from helpers import strip_microseconds
@@ -241,3 +241,20 @@ def test_fetching_can_fail(**kwargs):
 
     with pytest.raises(NoSuchJobError):
         yield from Job.fetch('b4a44d44-da16-4620-90a6-798e8cd72ca0')
+
+
+@async_test
+def test_fetching_unreadable_data(redis, **kwargs):
+    """Fetching succeeds on unreadable data, but lazy props fail."""
+
+    # Set up
+    job = Job.create(func=some_calculation, args=(3, 4), kwargs=dict(z=2))
+    yield from job.save()
+
+    # Just replace the data hkey with some random noise
+    yield from redis.hset(job.key, 'data', 'this is no pickle string')
+    yield from job.refresh()
+
+    for attr in ('func_name', 'instance', 'args', 'kwargs'):
+        with pytest.raises(UnpickleError):
+            getattr(job, attr)
