@@ -16,6 +16,12 @@ from .connections import resolve_connection
 from .job import Job
 
 
+def get_failed_queue(connection=None):
+    """Returns a handle to the special failed queue."""
+
+    return FailedQueue(connection=connection)
+
+
 class Queue:
     """asyncio job queue."""
 
@@ -143,3 +149,11 @@ class Queue:
     def __eq__(self, other):
 
         return self.name == other.name
+
+
+class FailedQueue(Queue):
+    """Special queue for failed asynchronous jobs."""
+
+    def __init__(self, connection=None):
+
+        super().__init__(JobStatus.FAILED, connection=connection)
