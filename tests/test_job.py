@@ -366,3 +366,18 @@ def test_get_result_ttl(**kwargs):
     yield from job.save()
     assert job.get_result_ttl(default_ttl=default_ttl) == default_ttl
     assert not job.get_result_ttl()
+
+
+@async_test
+def test_get_job_ttl(**kwargs):
+    """Getting job TTL."""
+
+    ttl = 1
+
+    job = Job.create(func=say_hello, ttl=ttl)
+    yield from job.save()
+    assert job.get_ttl() == ttl
+
+    job = Job.create(func=say_hello)
+    yield from job.save()
+    assert not job.get_ttl()
