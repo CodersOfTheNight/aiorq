@@ -11,7 +11,7 @@ from aiorq.job import Job, loads, dumps
 from aiorq.exceptions import NoSuchJobError, UnpickleError
 from testing import async_test
 from fixtures import (Number, some_calculation, say_hello,
-                      CallableObject, access_self)
+                      CallableObject, access_self, long_running_job)
 from helpers import strip_microseconds
 
 
@@ -391,3 +391,20 @@ def test_ttl_via_enqueue(redis, **kwargs):
     queue = Queue(connection=redis)
     job = yield from queue.enqueue(say_hello, ttl=ttl)
     assert job.get_ttl() == ttl
+
+
+@async_test
+def test_never_expire_during_execution(redis, **kwargs):
+    """Test what happens when job expires during execution."""
+
+    ttl = 1
+
+    queue = Queue(connection=redis)
+    job = yield from queue.enqueue(long_running_job, args=(2,), ttl=ttl)
+    assert job.get_ttl() == ttl
+
+    yield from job.save()
+    yield from job.perform()
+    assert job.get_ttl() == -1
+    assert (yield from job.exists(job.id))
+    assert (yield from job.result) == 'Done sleeping...'

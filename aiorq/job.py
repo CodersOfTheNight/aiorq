@@ -218,6 +218,21 @@ class Job(SynchronousJob):
         connection.delete(self.key)
         connection.delete(self.dependents_key)
 
+    # Job execution
+    @asyncio.coroutine
+    def perform(self):
+        """Invokes the job function with the job arguments."""
+
+        yield from self.connection.persist(self.key)
+        self.ttl = -1
+        _job_stack.push(self.id)
+        try:
+            # TODO: yield from here since this will run inside event loop.
+            self._result = self.func(*self.args, **self.kwargs)
+        finally:
+            assert self.id == _job_stack.pop()
+        return self._result
+
     @asyncio.coroutine
     def cancel(self):
         """Cancels the given job, which will prevent the job from ever being

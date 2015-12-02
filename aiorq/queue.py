@@ -117,6 +117,12 @@ class Queue:
         """
 
         ttl = kwargs.pop('ttl', None)
+
+        if 'args' in kwargs or 'kwargs' in kwargs:
+            # TODO: assert args == (), 'Extra positional arguments cannot be used when using explicit args and kwargs'  # noqa
+            args = kwargs.pop('args', None)
+            kwargs = kwargs.pop('kwargs', None)
+
         return (yield from self.enqueue_call(
             func=f, args=args, kwargs=kwargs, ttl=ttl))
 

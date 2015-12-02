@@ -1,3 +1,5 @@
+import time
+
 from aiorq import get_current_job
 
 
@@ -34,3 +36,9 @@ class CallableObject(object):
 def access_self():
 
     assert get_current_job() is not None
+
+
+def long_running_job(timeout=10):
+
+    time.sleep(timeout)
+    return 'Done sleeping...'
