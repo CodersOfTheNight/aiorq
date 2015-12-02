@@ -348,3 +348,21 @@ def test_job_access_within_job_function(**kwargs):
     with SynchronousConnection():
         w = SynchronousWorker([SynchronousQueue()])
     w.work(burst=True)
+
+
+@async_test
+def test_get_result_ttl(**kwargs):
+    """Getting job result TTL."""
+
+    job_result_ttl = 1
+    default_ttl = 2
+
+    job = Job.create(func=say_hello, result_ttl=job_result_ttl)
+    yield from job.save()
+    assert job.get_result_ttl(default_ttl=default_ttl) == job_result_ttl
+    assert job.get_result_ttl() == job_result_ttl
+
+    job = Job.create(func=say_hello)
+    yield from job.save()
+    assert job.get_result_ttl(default_ttl=default_ttl) == default_ttl
+    assert not job.get_result_ttl()
