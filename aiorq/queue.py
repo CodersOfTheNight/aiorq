@@ -129,10 +129,7 @@ class Queue:
 
     @asyncio.coroutine
     def enqueue_job(self, job):
-        """Enqueues a job for delayed execution.
-
-        If Queue is instantiated with async=False, job is executed immediately.
-        """
+        """Enqueues a job for delayed execution."""
 
         pipe = self.connection.pipeline()
         pipe.sadd(self.redis_queues_keys, self.key)
