@@ -194,3 +194,25 @@ def test_persistence_of_typical_jobs(redis, **kwargs):
     # ... and no other keys are stored
     assert sorted((yield from redis.hkeys(job.key))) \
         == [b'created_at', b'data', b'description']
+
+
+@async_test
+def test_persistence_of_parent_job(**kwargs):
+    """Storing jobs with parent job, either instance or key."""
+
+    parent_job = Job.create(func=some_calculation)
+    yield from parent_job.save()
+
+    job = Job.create(func=some_calculation, depends_on=parent_job)
+    yield from job.save()
+
+    stored_job = yield from Job.fetch(job.id)
+    assert stored_job._dependency_id == parent_job.id
+    assert (yield from stored_job.dependency) == parent_job
+
+    job = Job.create(func=some_calculation, depends_on=parent_job.id)
+    yield from job.save()
+    stored_job = yield from Job.fetch(job.id)
+
+    assert stored_job._dependency_id == parent_job.id
+    assert (yield from stored_job.dependency) == parent_job

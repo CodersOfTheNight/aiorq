@@ -39,6 +39,25 @@ class Job(SynchronousJob):
         conn = resolve_connection(connection)
         return (yield from conn.exists(cls.key_for(job_id)))
 
+    @property
+    @asyncio.coroutine
+    def dependency(self):
+        """Returns a job's dependency.
+
+        To avoid repeated Redis fetches, we cache job.dependency as
+        job._dependency.
+        """
+
+        if self._dependency_id is None:
+            return None
+        if hasattr(self, '_dependency'):
+            return self._dependency
+        job = yield from Job.fetch(
+            self._dependency_id, connection=self.connection)
+        yield from job.refresh()
+        self._dependency = job
+        return job
+
     @classmethod
     @asyncio.coroutine
     def fetch(cls, id, connection=None):
