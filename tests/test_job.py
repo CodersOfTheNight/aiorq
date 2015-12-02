@@ -1,13 +1,17 @@
 from datetime import datetime
 
 import pytest
+from rq import (Worker as SynchronousWorker,
+                Connection as SynchronousConnection,
+                Queue as SynchronousQueue)
 from rq.utils import utcformat
 
-from aiorq import get_current_job
+from aiorq import get_current_job, Queue
 from aiorq.job import Job, loads, dumps
 from aiorq.exceptions import NoSuchJobError, UnpickleError
 from testing import async_test
-from fixtures import Number, some_calculation, say_hello, CallableObject
+from fixtures import (Number, some_calculation, say_hello,
+                      CallableObject, access_self)
 from helpers import strip_microseconds
 
 
@@ -332,3 +336,15 @@ def test_job_access_outside_job_fails(**kwargs):
     """The current job is accessible only within a job context."""
 
     assert not (yield from get_current_job())
+
+
+@async_test
+def test_job_access_within_job_function(**kwargs):
+    """The current job is accessible within the job function."""
+
+    q = Queue()
+    # access_self calls get_current_job() and asserts
+    yield from q.enqueue(access_self)
+    with SynchronousConnection():
+        w = SynchronousWorker([SynchronousQueue()])
+    w.work(burst=True)

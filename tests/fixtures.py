@@ -1,3 +1,6 @@
+from aiorq import get_current_job
+
+
 def say_hello(name=None):
 
     if name is None:
@@ -26,3 +29,8 @@ class CallableObject(object):
     def __call__(self):
 
         return "I'm callable"
+
+
+def access_self():
+
+    assert get_current_job() is not None
