@@ -117,6 +117,13 @@ class Queue:
 
     @property
     @asyncio.coroutine
+    def jobs(self):
+        """Returns a list of all (valid) jobs in the queue."""
+
+        return (yield from self.get_jobs())
+
+    @property
+    @asyncio.coroutine
     def count(self):
         """Returns a count of all messages in the queue."""
 

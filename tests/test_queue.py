@@ -81,3 +81,17 @@ def test_remove(**kwargs):
     assert job.id in (yield from q.job_ids)
     yield from q.remove(job.id)
     assert job.id not in (yield from q.job_ids)
+
+
+@async_test
+def test_jobs(**kwargs):
+    """Getting jobs out of a queue."""
+
+    q = Queue('example')
+    assert not (yield from q.jobs)
+    job = yield from q.enqueue(say_hello)
+    assert (yield from q.jobs) == [job]
+
+    # Deleting job removes it from queue
+    yield from job.delete()
+    assert not (yield from q.job_ids)
