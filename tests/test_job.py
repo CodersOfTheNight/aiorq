@@ -1,3 +1,4 @@
+import time
 from datetime import datetime
 
 import pytest
@@ -499,3 +500,13 @@ def test_create_job_with_ttl_should_have_ttl_after_enqueued(redis, **kwargs):
     yield from queue.enqueue(say_hello, job_id="1234", ttl=10)
     job = (yield from queue.get_jobs())[0]
     assert job.ttl == 10
+
+
+@async_test
+def test_create_job_with_ttl_should_expire(redis, **kwargs):
+    """A job created with ttl expires."""
+
+    queue = Queue(connection=redis)
+    queue.enqueue(say_hello, job_id="1234", ttl=1)
+    time.sleep(1)
+    assert not len((yield from queue.get_jobs()))
