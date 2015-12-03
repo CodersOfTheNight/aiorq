@@ -448,3 +448,18 @@ def test_register_dependency(redis, **kwargs):
     yield from job.register_dependency()
     assert as_text((yield from redis.spop('rq:job:id:dependents'))) == job.id
     assert (yield from registry.get_job_ids()) == [job.id]
+
+
+@async_test
+def test_delete(redis, **kwargs):
+    """job.delete() deletes itself & dependents mapping from Redis."""
+
+    queue = Queue(connection=redis)
+    job = yield from queue.enqueue(say_hello)
+    job2 = Job.create(func=say_hello, depends_on=job)
+    yield from job2.register_dependency()
+    yield from job.delete()
+
+    assert not (yield from redis.exists(job.key))
+    assert not (yield from redis.exists(job.dependents_key))
+    assert job.id not in (yield from queue.get_job_ids())

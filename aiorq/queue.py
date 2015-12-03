@@ -11,6 +11,7 @@
 import asyncio
 
 from rq.job import JobStatus
+from rq.compat import as_text
 
 from .connections import resolve_connection
 from .job import Job
@@ -70,6 +71,18 @@ class Queue:
         """Returns whether the current queue is empty."""
 
         return (yield from self.count) == 0
+
+    @asyncio.coroutine
+    def get_job_ids(self, offset=0, length=-1):
+        """Returns a slice of job IDs in the queue."""
+
+        start = offset
+        if length >= 0:
+            end = offset + (length - 1)
+        else:
+            end = length
+        return [as_text(job_id) for job_id in
+                (yield from self.connection.lrange(self.key, start, end))]
 
     @property
     @asyncio.coroutine
