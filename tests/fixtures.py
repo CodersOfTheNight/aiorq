@@ -42,3 +42,15 @@ def long_running_job(timeout=10):
 
     time.sleep(timeout)
     return 'Done sleeping...'
+
+
+def echo(*args, **kwargs):
+
+    return (args, kwargs)
+
+
+class UnicodeStringObject(object):
+
+    def __repr__(self):
+
+        return 'é'

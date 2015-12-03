@@ -13,7 +13,8 @@ from aiorq.exceptions import NoSuchJobError, UnpickleError
 from aiorq.registry import DeferredJobRegistry
 from testing import async_test
 from fixtures import (Number, some_calculation, say_hello,
-                      CallableObject, access_self, long_running_job)
+                      CallableObject, access_self, long_running_job,
+                      echo, UnicodeStringObject)
 from helpers import strip_microseconds
 
 
@@ -477,3 +478,14 @@ def test_create_job_with_id(redis, **kwargs):
 
     with pytest.raises(TypeError):
         yield from queue.enqueue(say_hello, job_id=1234)
+
+
+@async_test
+def test_get_call_string_unicode(redis, **kwargs):
+    """Call string with unicode keyword arguments."""
+
+    queue = Queue(connection=redis)
+    job = yield from queue.enqueue(
+        echo, arg_with_unicode=UnicodeStringObject())
+    assert job.get_call_string()
+    yield from job.perform()
