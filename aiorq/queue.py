@@ -130,6 +130,7 @@ class Queue:
         """
 
         ttl = kwargs.pop('ttl', None)
+        job_id = kwargs.pop('job_id', None)
 
         if 'args' in kwargs or 'kwargs' in kwargs:
             # TODO: assert args == (), 'Extra positional arguments cannot be used when using explicit args and kwargs'  # noqa
@@ -137,10 +138,11 @@ class Queue:
             kwargs = kwargs.pop('kwargs', None)
 
         return (yield from self.enqueue_call(
-            func=f, args=args, kwargs=kwargs, ttl=ttl))
+            func=f, args=args, kwargs=kwargs, ttl=ttl, job_id=job_id))
 
     @asyncio.coroutine
-    def enqueue_call(self, func, args=None, kwargs=None, ttl=None):
+    def enqueue_call(self, func, args=None, kwargs=None, ttl=None,
+                     job_id=None):
         """Creates a job to represent the delayed function call and enqueues
         it.
 
@@ -151,7 +153,7 @@ class Queue:
 
         job = self.job_class.create(
             func, args=args, kwargs=kwargs, connection=self.connection,
-            ttl=ttl)
+            ttl=ttl, id=job_id)
         job = yield from self.enqueue_job(job)
         return job
 

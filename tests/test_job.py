@@ -463,3 +463,17 @@ def test_delete(redis, **kwargs):
     assert not (yield from redis.exists(job.key))
     assert not (yield from redis.exists(job.dependents_key))
     assert job.id not in (yield from queue.get_job_ids())
+
+
+@async_test
+def test_create_job_with_id(redis, **kwargs):
+    """Create jobs with a custom ID."""
+
+    queue = Queue(connection=redis)
+    job = yield from queue.enqueue(say_hello, job_id="1234")
+
+    assert job.id == "1234"
+    yield from job.perform()
+
+    with pytest.raises(TypeError):
+        yield from queue.enqueue(say_hello, job_id=1234)
