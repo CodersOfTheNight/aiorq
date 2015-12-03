@@ -187,6 +187,28 @@ class Job(SynchronousJob):
         yield from self.cleanup(self.ttl, pipeline=connection)
 
     @asyncio.coroutine
+    def register_dependency(self, pipeline=None):
+        """Jobs may have dependencies.  Jobs are enqueued only if the job they
+        depend on is successfully performed.  We record this relation
+        as a reverse dependency (a Redis set), with a key that looks
+        something like:
+
+            rq:job:job_id:dependents = {'job_id_1', 'job_id_2'}
+
+        This method adds the job in its dependency's dependents set
+        and adds the job to DeferredJobRegistry.
+        """
+
+        from .registry import DeferredJobRegistry
+        registry = DeferredJobRegistry(self.origin, connection=self.connection)
+        yield from registry.add(self, pipeline=pipeline)
+
+        # TODO: don't yield from if pipeline is on
+        connection = self.connection
+        yield from connection.sadd(
+            Job.dependents_key_for(self._dependency_id), self.id)
+
+    @asyncio.coroutine
     def cleanup(self, ttl=None, pipeline=None):
         """Prepare job for eventual deletion (if needed).
 

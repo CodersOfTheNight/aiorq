@@ -4,11 +4,13 @@ import pytest
 from rq import (Worker as SynchronousWorker,
                 Connection as SynchronousConnection,
                 Queue as SynchronousQueue)
+from rq.compat import as_text
 from rq.utils import utcformat
 
 from aiorq import get_current_job, Queue
 from aiorq.job import Job, loads, dumps
 from aiorq.exceptions import NoSuchJobError, UnpickleError
+from aiorq.registry import DeferredJobRegistry
 from testing import async_test
 from fixtures import (Number, some_calculation, say_hello,
                       CallableObject, access_self, long_running_job)
@@ -429,3 +431,20 @@ def test_cleanup(redis, **kwargs):
     yield from job.cleanup(ttl=0)
     with pytest.raises(NoSuchJobError):
         yield from Job.fetch(job.id, redis)
+
+
+@async_test
+def test_register_dependency(redis, **kwargs):
+    """Ensure dependency registration works properly."""
+
+    origin = 'some_queue'
+    registry = DeferredJobRegistry(origin, redis)
+
+    job = Job.create(func=say_hello, origin=origin)
+    job._dependency_id = 'id'
+    yield from job.save()
+
+    assert not (yield from registry.get_job_ids())
+    yield from job.register_dependency()
+    assert as_text((yield from redis.spop('rq:job:id:dependents'))) == job.id
+    assert (yield from registry.get_job_ids()) == [job.id]
