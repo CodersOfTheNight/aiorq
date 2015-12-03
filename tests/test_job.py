@@ -489,3 +489,13 @@ def test_get_call_string_unicode(redis, **kwargs):
         echo, arg_with_unicode=UnicodeStringObject())
     assert job.get_call_string()
     yield from job.perform()
+
+
+@async_test
+def test_create_job_with_ttl_should_have_ttl_after_enqueued(redis, **kwargs):
+    """Create jobs with ttl and checks if get_jobs returns it properly."""
+
+    queue = Queue(connection=redis)
+    yield from queue.enqueue(say_hello, job_id="1234", ttl=10)
+    job = (yield from queue.get_jobs())[0]
+    assert job.ttl == 10

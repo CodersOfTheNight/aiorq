@@ -14,6 +14,7 @@ from rq.job import JobStatus
 from rq.compat import as_text
 
 from .connections import resolve_connection
+from .exceptions import NoSuchJobError
 from .job import Job
 
 
@@ -73,6 +74,14 @@ class Queue:
         return (yield from self.count) == 0
 
     @asyncio.coroutine
+    def fetch_job(self, job_id):
+        try:
+            return (yield from self.job_class.fetch(
+                job_id, connection=self.connection))
+        except NoSuchJobError:
+            yield from self.remove(job_id)
+
+    @asyncio.coroutine
     def get_job_ids(self, offset=0, length=-1):
         """Returns a slice of job IDs in the queue."""
 
@@ -83,6 +92,21 @@ class Queue:
             end = length
         return [as_text(job_id) for job_id in
                 (yield from self.connection.lrange(self.key, start, end))]
+
+    @asyncio.coroutine
+    def get_jobs(self, offset=0, length=-1):
+        """Returns a slice of jobs in the queue."""
+
+        job_ids = yield from self.get_job_ids(offset, length)
+        # NOTE: yielding from list comprehension instantiate not
+        # started generator object.  Asyncio will fail since we don't
+        # yield from future.
+        jobs = []
+        for job_id in job_ids:
+            job = yield from self.fetch_job(job_id)
+            if job is not None:
+                jobs.append(job)
+        return jobs
 
     @property
     @asyncio.coroutine
