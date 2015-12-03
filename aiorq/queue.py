@@ -110,6 +110,13 @@ class Queue:
 
     @property
     @asyncio.coroutine
+    def job_ids(self):
+        """Returns a list of all job IDS in the queue."""
+
+        return (yield from self.get_job_ids())
+
+    @property
+    @asyncio.coroutine
     def count(self):
         """Returns a count of all messages in the queue."""
 
@@ -122,9 +129,10 @@ class Queue:
         job_id = (job_or_id.id
                   if isinstance(job_or_id, self.job_class)
                   else job_or_id)
-        # TODO: yield from if pipeline is none and return lrem result
-        connection = pipeline
-        connection.lrem(self.key, 1, job_id)
+        connection = pipeline if pipeline else self.connection
+        coroutine = connection.lrem(self.key, 1, job_id)
+        if not pipeline:
+            return (yield from coroutine)
 
     @asyncio.coroutine
     def push_job_id(self, job_id, pipeline=None, at_front=False):

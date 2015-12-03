@@ -1,5 +1,6 @@
 from aiorq import Queue
 from aiorq.job import Job
+from fixtures import say_hello
 from testing import async_test
 
 
@@ -64,3 +65,19 @@ def test_queue_is_empty(redis, **kwargs):
     assert (yield from q.is_empty())
     yield from redis.rpush('rq:queue:example', 'sentinel message')
     assert not (yield from q.is_empty())
+
+
+@async_test
+def test_remove(**kwargs):
+    """Ensure queue.remove properly removes Job from queue."""
+
+    q = Queue('example')
+    job = yield from q.enqueue(say_hello)
+    assert job.id in (yield from q.job_ids)
+    yield from q.remove(job)
+    assert job.id not in (yield from q.job_ids)
+
+    job = yield from q.enqueue(say_hello)
+    assert job.id in (yield from q.job_ids)
+    yield from q.remove(job.id)
+    assert job.id not in (yield from q.job_ids)
