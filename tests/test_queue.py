@@ -1,3 +1,5 @@
+import pytest
+
 from aiorq import Queue
 from aiorq.job import Job
 from fixtures import say_hello
@@ -95,3 +97,21 @@ def test_jobs(**kwargs):
     # Deleting job removes it from queue
     yield from job.delete()
     assert not (yield from q.job_ids)
+
+
+@async_test
+def test_compact(redis, **kwargs):
+    """Queue.compact() removes non-existing jobs."""
+
+    q = Queue()
+
+    yield from q.enqueue(say_hello, 'Alice')
+    yield from q.enqueue(say_hello, 'Charlie')
+    yield from redis.lpush(q.key, '1', '2')
+
+    assert (yield from q.count) == 4
+    yield from q.compact()
+    assert (yield from q.count) == 2
+
+    with pytest.raises(RuntimeError):
+        len(q)

@@ -9,6 +9,7 @@
 """
 
 import asyncio
+import uuid
 
 from rq.job import JobStatus
 from rq.compat import as_text
@@ -37,6 +38,12 @@ class Queue:
         prefix = self.redis_queue_namespace_prefix
         self.name = name
         self._key = '{0}{1}'.format(prefix, name)
+
+    def __len__(self):
+        """Queue length."""
+
+        raise RuntimeError('Do not use `len` on asynchronous queues'
+                           ' (use queue.count instead).')
 
     @property
     def key(self):
@@ -140,6 +147,22 @@ class Queue:
         coroutine = connection.lrem(self.key, 1, job_id)
         if not pipeline:
             return (yield from coroutine)
+
+    @asyncio.coroutine
+    def compact(self):
+        """Removes all "dead" jobs from the queue by cycling through it, while
+        guaranteeing FIFO semantics.
+        """
+
+        COMPACT_QUEUE = 'rq:queue:_compact:{0}'.format(uuid.uuid4())
+
+        yield from self.connection.rename(self.key, COMPACT_QUEUE)
+        while True:
+            job_id = as_text((yield from self.connection.lpop(COMPACT_QUEUE)))
+            if job_id is None:
+                break
+            if (yield from self.job_class.exists(job_id, self.connection)):
+                (yield from self.connection.rpush(self.key, job_id))
 
     @asyncio.coroutine
     def push_job_id(self, job_id, pipeline=None, at_front=False):
