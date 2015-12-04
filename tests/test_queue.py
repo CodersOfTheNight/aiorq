@@ -7,7 +7,7 @@ from testing import async_test
 
 
 @async_test
-def test_create_queue(**kwargs):
+def test_create_queue():
     """We can create queue instance."""
 
     q = Queue()
@@ -15,7 +15,7 @@ def test_create_queue(**kwargs):
 
 
 @async_test
-def test_create_named_queue(**kwargs):
+def test_create_named_queue():
     """We can create named queue instance."""
 
     q = Queue('my-queue')
@@ -23,7 +23,7 @@ def test_create_named_queue(**kwargs):
 
 
 @async_test
-def test_equality(**kwargs):
+def test_equality():
     """Mathematical equality of queues."""
 
     q1 = Queue('foo')
@@ -36,7 +36,7 @@ def test_equality(**kwargs):
 
 
 @async_test
-def test_empty_queue(redis, **kwargs):
+def test_empty_queue(redis):
     """Emptying queues."""
 
     q = Queue('example', connection=redis)
@@ -49,7 +49,7 @@ def test_empty_queue(redis, **kwargs):
 
 
 @async_test
-def test_empty_remove_jobs(redis, **kwargs):
+def test_empty_remove_jobs(redis):
     """Emptying a queue deletes the associated job objects."""
 
     q = Queue('example')
@@ -60,7 +60,7 @@ def test_empty_remove_jobs(redis, **kwargs):
 
 
 @async_test
-def test_queue_is_empty(redis, **kwargs):
+def test_queue_is_empty(redis):
     """Detecting empty queues."""
 
     q = Queue('example')
@@ -70,7 +70,7 @@ def test_queue_is_empty(redis, **kwargs):
 
 
 @async_test
-def test_remove(**kwargs):
+def test_remove():
     """Ensure queue.remove properly removes Job from queue."""
 
     q = Queue('example')
@@ -86,7 +86,7 @@ def test_remove(**kwargs):
 
 
 @async_test
-def test_jobs(**kwargs):
+def test_jobs():
     """Getting jobs out of a queue."""
 
     q = Queue('example')
@@ -100,7 +100,7 @@ def test_jobs(**kwargs):
 
 
 @async_test
-def test_compact(redis, **kwargs):
+def test_compact(redis):
     """Queue.compact() removes non-existing jobs."""
 
     q = Queue()

@@ -7,7 +7,7 @@ from testing import async_test, find_connection
 
 
 @async_test
-def test_connection_detection(redis, **kwargs):
+def test_connection_detection(redis):
     """Automatic detection of the connection."""
 
     q = Queue()

@@ -1,4 +1,5 @@
 import asyncio
+import functools
 import gc
 
 from aioredis import create_redis
@@ -18,14 +19,19 @@ def find_connection(loop):
 def async_test(f):
     """Run asynchronous tests inside event loop as coroutines."""
 
-    def wrapper():
+    @functools.wraps(f)
+    def wrapper(**kwargs):
 
         @asyncio.coroutine
-        def coroutine(loop):
+        def coroutine(loop, kwargs):
             redis = yield from find_connection(loop)
             push_connection(redis)
+            if 'redis' in kwargs:
+                kwargs['redis'] = redis
+            if 'loop' in kwargs:
+                kwargs['loop'] = loop
             try:
-                yield from asyncio.coroutine(f)(redis=redis, loop=loop)
+                yield from asyncio.coroutine(f)(**kwargs)
             except Exception:
                 raise
             else:
@@ -41,7 +47,7 @@ def async_test(f):
             'Test require empty connection stack'
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(None)
-        loop.run_until_complete(coroutine(loop))
+        loop.run_until_complete(coroutine(loop, kwargs))
         loop.stop()
         loop.run_forever()
         loop.close()
