@@ -12,14 +12,12 @@ from aiorq import get_current_job, Queue
 from aiorq.job import Job, loads, dumps
 from aiorq.exceptions import NoSuchJobError, UnpickleError
 from aiorq.registry import DeferredJobRegistry
-from testing import async_test
 from fixtures import (Number, some_calculation, say_hello,
                       CallableObject, access_self, long_running_job,
                       echo, UnicodeStringObject)
 from helpers import strip_microseconds
 
 
-@async_test
 def test_unicode():
     """Unicode in job description."""
 
@@ -29,7 +27,6 @@ def test_unicode():
     assert job.description, expected_string
 
 
-@async_test
 def test_create_empty_job():
     """Creation of new empty jobs."""
 
@@ -57,7 +54,6 @@ def test_create_empty_job():
         job.kwargs
 
 
-@async_test
 def test_create_typical_job():
     """Creation of jobs for function calls."""
     job = Job.create(func=some_calculation,
@@ -80,7 +76,6 @@ def test_create_typical_job():
     assert not (yield from job.result)
 
 
-@async_test
 def test_create_instance_method_job():
     """Creation of jobs for instance methods."""
 
@@ -93,7 +88,6 @@ def test_create_instance_method_job():
     assert job.args == (4,)
 
 
-@async_test
 def test_create_job_from_string_function():
     """Creation of jobs using string specifier."""
 
@@ -105,7 +99,6 @@ def test_create_job_from_string_function():
     assert job.args == ('World',)
 
 
-@async_test
 def test_create_job_from_callable_class():
     """Creation of jobs using a callable class specifier."""
 
@@ -116,7 +109,6 @@ def test_create_job_from_callable_class():
     assert job.instance == kallable
 
 
-@async_test
 def test_job_properties_set_data_property():
     """Data property gets derived from the job tuple."""
 
@@ -130,7 +122,6 @@ def test_job_properties_set_data_property():
     assert kwargs == {}
 
 
-@async_test
 def test_data_property_sets_job_properties():
     """Job tuple gets derived lazily from data property."""
 
@@ -143,7 +134,6 @@ def test_data_property_sets_job_properties():
     assert job.kwargs == {'bar': 'qux'}
 
 
-@async_test
 def test_save(redis):
     """Storing jobs."""
 
@@ -159,7 +149,6 @@ def test_save(redis):
     assert unpickled_data[0] == 'fixtures.some_calculation'
 
 
-@async_test
 def test_fetch(redis):
     """Fetching jobs."""
 
@@ -180,7 +169,6 @@ def test_fetch(redis):
     assert job.created_at == datetime(2012, 2, 7, 22, 13, 24)
 
 
-@async_test
 def test_persistence_of_empty_jobs():
     """Storing empty jobs."""
 
@@ -189,7 +177,6 @@ def test_persistence_of_empty_jobs():
         yield from job.save()
 
 
-@async_test
 def test_persistence_of_typical_jobs(redis):
     """Storing typical jobs."""
 
@@ -206,7 +193,6 @@ def test_persistence_of_typical_jobs(redis):
         == [b'created_at', b'data', b'description']
 
 
-@async_test
 def test_persistence_of_parent_job():
     """Storing jobs with parent job, either instance or key."""
 
@@ -228,7 +214,6 @@ def test_persistence_of_parent_job():
     assert (yield from stored_job.dependency) == parent_job
 
 
-@async_test
 def test_store_then_fetch():
     """Store, then fetch."""
 
@@ -244,7 +229,6 @@ def test_store_then_fetch():
     assert job == job2
 
 
-@async_test
 def test_fetching_can_fail():
     """Fetching fails for non-existing jobs."""
 
@@ -252,7 +236,6 @@ def test_fetching_can_fail():
         yield from Job.fetch('b4a44d44-da16-4620-90a6-798e8cd72ca0')
 
 
-@async_test
 def test_fetching_unreadable_data(redis):
     """Fetching succeeds on unreadable data, but lazy props fail."""
 
@@ -269,7 +252,6 @@ def test_fetching_unreadable_data(redis):
             getattr(job, attr)
 
 
-@async_test
 def test_job_is_unimportable(redis):
     """Jobs that cannot be imported throw exception on access."""
 
@@ -288,7 +270,6 @@ def test_job_is_unimportable(redis):
         job.func  # accessing the func property should fail
 
 
-@async_test
 def test_custom_meta_is_persisted(redis):
     """Additional meta data on jobs are stored persisted correctly."""
 
@@ -303,7 +284,6 @@ def test_custom_meta_is_persisted(redis):
     assert job2.meta['foo'] == 'bar'
 
 
-@async_test
 def test_result_ttl_is_persisted(redis):
     """Ensure that job's result_ttl is set properly"""
 
@@ -318,7 +298,6 @@ def test_result_ttl_is_persisted(redis):
     assert not job.result_ttl
 
 
-@async_test
 def test_description_is_persisted(redis):
     """Ensure that job's custom description is set properly."""
 
@@ -335,14 +314,12 @@ def test_description_is_persisted(redis):
     assert job.description == "fixtures.say_hello('Lionel')"
 
 
-@async_test
 def test_job_access_outside_job_fails():
     """The current job is accessible only within a job context."""
 
     assert not (yield from get_current_job())
 
 
-@async_test
 def test_job_access_within_job_function():
     """The current job is accessible within the job function."""
 
@@ -354,7 +331,6 @@ def test_job_access_within_job_function():
     w.work(burst=True)
 
 
-@async_test
 def test_get_result_ttl():
     """Getting job result TTL."""
 
@@ -372,7 +348,6 @@ def test_get_result_ttl():
     assert not job.get_result_ttl()
 
 
-@async_test
 def test_get_job_ttl():
     """Getting job TTL."""
 
@@ -387,7 +362,6 @@ def test_get_job_ttl():
     assert not job.get_ttl()
 
 
-@async_test
 def test_ttl_via_enqueue(redis):
     """Enqueue set custom TTL on job."""
 
@@ -397,7 +371,6 @@ def test_ttl_via_enqueue(redis):
     assert job.get_ttl() == ttl
 
 
-@async_test
 def test_never_expire_during_execution(redis):
     """Test what happens when job expires during execution."""
 
@@ -414,7 +387,6 @@ def test_never_expire_during_execution(redis):
     assert (yield from job.result) == 'Done sleeping...'
 
 
-@async_test
 def test_cleanup(redis):
     """Test that jobs and results are expired properly."""
 
@@ -435,7 +407,6 @@ def test_cleanup(redis):
         yield from Job.fetch(job.id, redis)
 
 
-@async_test
 def test_register_dependency(redis):
     """Ensure dependency registration works properly."""
 
@@ -452,7 +423,6 @@ def test_register_dependency(redis):
     assert (yield from registry.get_job_ids()) == [job.id]
 
 
-@async_test
 def test_delete(redis):
     """job.delete() deletes itself & dependents mapping from Redis."""
 
@@ -467,7 +437,6 @@ def test_delete(redis):
     assert job.id not in (yield from queue.get_job_ids())
 
 
-@async_test
 def test_create_job_with_id(redis):
     """Create jobs with a custom ID."""
 
@@ -481,7 +450,6 @@ def test_create_job_with_id(redis):
         yield from queue.enqueue(say_hello, job_id=1234)
 
 
-@async_test
 def test_get_call_string_unicode(redis):
     """Call string with unicode keyword arguments."""
 
@@ -492,7 +460,6 @@ def test_get_call_string_unicode(redis):
     yield from job.perform()
 
 
-@async_test
 def test_create_job_with_ttl_should_have_ttl_after_enqueued(redis):
     """Create jobs with ttl and checks if get_jobs returns it properly."""
 
@@ -502,7 +469,6 @@ def test_create_job_with_ttl_should_have_ttl_after_enqueued(redis):
     assert job.ttl == 10
 
 
-@async_test
 def test_create_job_with_ttl_should_expire(redis):
     """A job created with ttl expires."""
 

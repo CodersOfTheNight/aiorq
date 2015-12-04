@@ -3,10 +3,8 @@ import pytest
 from aiorq import Queue
 from aiorq.job import Job
 from fixtures import say_hello
-from testing import async_test
 
 
-@async_test
 def test_create_queue():
     """We can create queue instance."""
 
@@ -14,7 +12,6 @@ def test_create_queue():
     assert q.name == 'default'
 
 
-@async_test
 def test_create_named_queue():
     """We can create named queue instance."""
 
@@ -22,7 +19,6 @@ def test_create_named_queue():
     assert q.name == 'my-queue'
 
 
-@async_test
 def test_equality():
     """Mathematical equality of queues."""
 
@@ -35,7 +31,6 @@ def test_equality():
     assert q2 != q3
 
 
-@async_test
 def test_empty_queue(redis):
     """Emptying queues."""
 
@@ -48,7 +43,6 @@ def test_empty_queue(redis):
     assert (yield from redis.lpop('rq:queue:example')) is None
 
 
-@async_test
 def test_empty_remove_jobs(redis):
     """Emptying a queue deletes the associated job objects."""
 
@@ -59,7 +53,6 @@ def test_empty_remove_jobs(redis):
     assert not (yield from Job.exists(job.id))
 
 
-@async_test
 def test_queue_is_empty(redis):
     """Detecting empty queues."""
 
@@ -69,7 +62,6 @@ def test_queue_is_empty(redis):
     assert not (yield from q.is_empty())
 
 
-@async_test
 def test_remove():
     """Ensure queue.remove properly removes Job from queue."""
 
@@ -85,7 +77,6 @@ def test_remove():
     assert job.id not in (yield from q.job_ids)
 
 
-@async_test
 def test_jobs():
     """Getting jobs out of a queue."""
 
@@ -99,7 +90,6 @@ def test_jobs():
     assert not (yield from q.job_ids)
 
 
-@async_test
 def test_compact(redis):
     """Queue.compact() removes non-existing jobs."""
 

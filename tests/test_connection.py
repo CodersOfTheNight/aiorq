@@ -3,10 +3,9 @@ import pytest
 from aiorq import (Connection, use_connection, push_connection,
                    get_current_connection, Queue)
 from aiorq.connections import _connection_stack
-from testing import async_test, find_connection
+from testing import find_connection
 
 
-@async_test
 def test_connection_detection(redis):
     """Automatic detection of the connection."""
 
@@ -14,7 +13,6 @@ def test_connection_detection(redis):
     assert q.connection == redis
 
 
-@async_test
 def test_connection_stacking(redis, loop):
     """Connection stacking."""
 
@@ -31,7 +29,6 @@ def test_connection_stacking(redis, loop):
     assert q2.connection == conn2
 
 
-@async_test
 def test_implicit_connection_stacking(redis, loop):
     """Connection stacking with implicit connection creation."""
 
@@ -46,7 +43,6 @@ def test_implicit_connection_stacking(redis, loop):
     assert isinstance(q2.connection, type(redis))
 
 
-@async_test
 def test_use_connection(redis, loop):
     """Replace connection stack."""
 
@@ -56,7 +52,6 @@ def test_use_connection(redis, loop):
     push_connection(redis)      # Make test finalizer happy.
 
 
-@async_test
 def test_use_connection_explicit_redis(redis, loop):
     """Pass redis connection explicitly."""
 
@@ -66,7 +61,6 @@ def test_use_connection_explicit_redis(redis, loop):
     push_connection(redis)      # Make test finalizer happy.
 
 
-@async_test
 def test_use_connection_cleanup_stack(redis, loop):
     """Ensure connection stack cleanup."""
 
@@ -76,7 +70,6 @@ def test_use_connection_cleanup_stack(redis, loop):
     push_connection(redis)      # Make test finalizer happy.
 
 
-@async_test
 def test_connection_stacking_with_use_connection(redis, loop):
     """Disallow use of use_connection() together with stacked contexts."""
 
