@@ -154,3 +154,23 @@ def test_pop_job_id():
 
     # ...and assert the queue count when down
     assert not (yield from q.count)
+
+
+def test_dequeue():
+    """Dequeueing jobs from queues."""
+
+    # Set up
+    q = Queue()
+    result = yield from q.enqueue(say_hello, 'Rick', foo='bar')
+
+    # Dequeue a job (not a job ID) off the queue
+    assert (yield from q.count)
+    job = yield from q.dequeue()
+    assert job.id == result.id
+    assert job.func == say_hello
+    assert job.origin == q.name
+    assert job.args[0] == 'Rick'
+    assert job.kwargs['foo'] == 'bar'
+
+    # ...and assert the queue count when down
+    assert not (yield from q.count)

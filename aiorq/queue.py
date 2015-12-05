@@ -16,7 +16,7 @@ from rq.compat import as_text
 from rq.utils import utcnow
 
 from .connections import resolve_connection
-from .exceptions import NoSuchJobError
+from .exceptions import NoSuchJobError, UnpickleError
 from .job import Job
 
 
@@ -244,6 +244,32 @@ class Queue:
         """Pops a given job ID from this Redis queue."""
 
         return as_text((yield from self.connection.lpop(self.key)))
+
+    @asyncio.coroutine
+    def dequeue(self):
+        """Dequeues the front-most job from this queue.
+
+        Returns a job_class instance, which can be executed or
+        inspected.
+        """
+
+        while True:
+            job_id = yield from self.pop_job_id()
+            if job_id is None:
+                return None
+            try:
+                job = yield from self.job_class.fetch(
+                    job_id, connection=self.connection)
+            except NoSuchJobError as e:
+                # Silently pass on jobs that don't exist (anymore),
+                continue
+            except UnpickleError as e:
+                # Attach queue information on the exception for improved error
+                # reporting
+                e.job_id = job_id
+                e.queue = self
+                raise e
+            return job
 
     def __eq__(self, other):
 
