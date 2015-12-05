@@ -201,3 +201,16 @@ def test_dequeue_instance_method():
     assert job.instance.__dict__ == n.__dict__
     assert job.func.__name__ == 'div'
     assert job.args == (4,)
+
+
+def test_dequeue_class_method():
+    """Dequeueing class method jobs from queues."""
+
+    q = Queue()
+    yield from q.enqueue(Number.divide, 3, 4)
+
+    job = yield from q.dequeue()
+
+    assert job.instance.__dict__ == Number.__dict__
+    assert job.func.__name__ == 'divide'
+    assert job.args == (3, 4)

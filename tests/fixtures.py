@@ -21,6 +21,11 @@ class Number:
 
         self.value = value
 
+    @classmethod
+    def divide(cls, x, y):
+
+        return x * y
+
     def div(self, y):
 
         return self.value / y
