@@ -214,3 +214,20 @@ def test_dequeue_class_method():
     assert job.instance.__dict__ == Number.__dict__
     assert job.func.__name__ == 'divide'
     assert job.args == (3, 4)
+
+
+def test_dequeue_ignores_nonexisting_jobs():
+    """Dequeuing silently ignores non-existing jobs."""
+
+    q = Queue()
+    uuid = '49f205ab-8ea3-47dd-a1b5-bfa186870fc8'
+    yield from q.push_job_id(uuid)
+    yield from q.push_job_id(uuid)
+    result = yield from q.enqueue(say_hello, 'Nick', foo='bar')
+    yield from q.push_job_id(uuid)
+
+    # Dequeue simply ignores the missing job and returns None
+    assert (yield from q.count) == 4
+    assert (yield from q.dequeue()).id == result.id
+    assert not (yield from q.dequeue())
+    assert not (yield from q.count)
