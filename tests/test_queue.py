@@ -262,3 +262,16 @@ def test_dequeue_any():
     assert job.func == say_hello
     assert job.origin == barq.name
     assert job.args[0] == 'for Bar', 'Bar should be dequeued second.'
+
+
+def test_dequeue_any_ignores_nonexisting_jobs():
+    """Dequeuing (from any queue) silently ignores non-existing jobs."""
+
+    q = Queue('low')
+    uuid = '49f205ab-8ea3-47dd-a1b5-bfa186870fc8'
+    yield from q.push_job_id(uuid)
+
+    # Dequeue simply ignores the missing job and returns None
+    assert (yield from q.count) == 1
+    assert not (yield from Queue.dequeue_any([Queue(), Queue('low')], None))
+    assert not (yield from q.count)
