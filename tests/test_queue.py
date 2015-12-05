@@ -1,4 +1,7 @@
 import pytest
+from rq import (Worker as SynchronousWorker,
+                Connection as SynchronousConnection,
+                Queue as SynchronousQueue)
 from rq.job import JobStatus
 
 from aiorq import Queue
@@ -305,3 +308,36 @@ def test_enqueue_explicit_args():
     assert job.result_ttl == 2
     assert (yield from job.perform()) == \
         ((1,), {'timeout': 1, 'result_ttl': 1})
+
+
+def test_all_queues():
+    """All queues"""
+
+    q1 = Queue('first-queue')
+    q2 = Queue('second-queue')
+    q3 = Queue('third-queue')
+
+    # Ensure a queue is added only once a job is enqueued
+    assert not len((yield from Queue.all()))
+    yield from q1.enqueue(say_hello)
+    assert len((yield from Queue.all())) == 1
+
+    # Ensure this holds true for multiple queues
+    yield from q2.enqueue(say_hello)
+    yield from q3.enqueue(say_hello)
+    names = [q.name for q in (yield from Queue.all())]
+    assert len((yield from Queue.all())) == 3
+
+    # Verify names
+    assert 'first-queue' in names
+    assert 'second-queue' in names
+    assert 'third-queue' in names
+
+    # Now empty two queues
+    with SynchronousConnection():
+        w = SynchronousWorker([SynchronousQueue('second-queue'),
+                               SynchronousQueue('third-queue')])
+    w.work(burst=True)
+
+    # Queue.all() should still report the empty queues
+    assert len((yield from Queue.all())) == 3

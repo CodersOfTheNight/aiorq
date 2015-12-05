@@ -34,6 +34,19 @@ class Queue:
     redis_queues_keys = 'rq:queues'
 
     @classmethod
+    def all(cls, connection=None):
+        """Returns an iterable of all Queues."""
+
+        connection = resolve_connection(connection)
+        rq_keys = yield from connection.smembers(cls.redis_queues_keys)
+
+        def to_queue(queue_key):
+            return cls.from_queue_key(
+                as_text(queue_key), connection=connection)
+
+        return [to_queue(rq_key) for rq_key in rq_keys if rq_key]
+
+    @classmethod
     def from_queue_key(cls, queue_key, connection=None):
         """Returns a Queue instance, based on the naming conventions for
         naming the internal Redis keys.  Can be used to reverse-lookup
