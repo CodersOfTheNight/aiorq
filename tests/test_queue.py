@@ -1,4 +1,5 @@
 import pytest
+from rq.job import JobStatus
 
 from aiorq import Queue
 from aiorq.job import Job
@@ -275,3 +276,11 @@ def test_dequeue_any_ignores_nonexisting_jobs():
     assert (yield from q.count) == 1
     assert not (yield from Queue.dequeue_any([Queue(), Queue('low')], None))
     assert not (yield from q.count)
+
+
+def test_enqueue_sets_status():
+    """Enqueueing a job sets its status to "queued"."""
+
+    q = Queue()
+    job = yield from q.enqueue(say_hello)
+    assert (yield from job.get_status()) == JobStatus.QUEUED

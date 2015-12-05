@@ -36,6 +36,14 @@ class Job(SynchronousJob):
     """A Job is just convenient data structure to pass around (meta) data."""
 
     @asyncio.coroutine
+    def get_status(self):
+        """Get job status asynchronously."""
+
+        self._status = as_text(
+            (yield from self.connection.hget(self.key, 'status')))
+        return self._status
+
+    @asyncio.coroutine
     def set_status(self, status, pipeline=None):
         """Set job status asynchronously."""
 
