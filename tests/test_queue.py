@@ -3,7 +3,7 @@ from rq.job import JobStatus
 
 from aiorq import Queue
 from aiorq.job import Job
-from fixtures import say_hello, Number
+from fixtures import say_hello, Number, echo
 
 
 def test_create_queue():
@@ -284,3 +284,24 @@ def test_enqueue_sets_status():
     q = Queue()
     job = yield from q.enqueue(say_hello)
     assert (yield from job.get_status()) == JobStatus.QUEUED
+
+
+def test_enqueue_explicit_args():
+    """enqueue() works for both implicit/explicit args."""
+
+    q = Queue()
+
+    # Implicit args/kwargs mode
+    job = yield from q.enqueue(echo, 1, timeout=1, result_ttl=1, bar='baz')
+    assert job.timeout == 1
+    assert job.result_ttl == 1
+    assert (yield from job.perform()) == ((1,), {'bar': 'baz'})
+
+    # Explicit kwargs mode
+    job = yield from q.enqueue(
+        echo, timeout=2, result_ttl=2,
+        args=[1], kwargs={'timeout': 1, 'result_ttl': 1})
+    assert job.timeout == 2
+    assert job.result_ttl == 2
+    assert (yield from job.perform()) == \
+        ((1,), {'timeout': 1, 'result_ttl': 1})

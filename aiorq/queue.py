@@ -205,20 +205,24 @@ class Queue:
           meaningful to the import context of the workers)
         """
 
+        timeout = kwargs.pop('timeout', None)
+        result_ttl = kwargs.pop('result_ttl', None)
         ttl = kwargs.pop('ttl', None)
         job_id = kwargs.pop('job_id', None)
 
         if 'args' in kwargs or 'kwargs' in kwargs:
-            # TODO: assert args == (), 'Extra positional arguments cannot be used when using explicit args and kwargs'  # noqa
+            assert args == (), ('Extra positional arguments cannot be used '
+                                'when using explicit args and kwargs')
             args = kwargs.pop('args', None)
             kwargs = kwargs.pop('kwargs', None)
 
         return (yield from self.enqueue_call(
-            func=f, args=args, kwargs=kwargs, ttl=ttl, job_id=job_id))
+            func=f, args=args, kwargs=kwargs, timeout=timeout,
+            result_ttl=result_ttl, ttl=ttl, job_id=job_id))
 
     @asyncio.coroutine
-    def enqueue_call(self, func, args=None, kwargs=None, ttl=None,
-                     job_id=None):
+    def enqueue_call(self, func, args=None, kwargs=None, timeout=None,
+                     result_ttl=None, ttl=None, job_id=None):
         """Creates a job to represent the delayed function call and enqueues
         it.
 
@@ -228,8 +232,9 @@ class Queue:
         """
 
         job = self.job_class.create(
-            func, args=args, kwargs=kwargs, connection=self.connection,
-            ttl=ttl, id=job_id)
+            func, args=args, kwargs=kwargs, timeout=timeout,
+            connection=self.connection, result_ttl=result_ttl, ttl=ttl,
+            id=job_id)
         job = yield from self.enqueue_job(job)
         return job
 
