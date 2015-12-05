@@ -174,3 +174,13 @@ def test_dequeue():
 
     # ...and assert the queue count when down
     assert not (yield from q.count)
+
+
+def test_dequeue_deleted_jobs():
+    """Dequeueing deleted jobs from queues don't blow the stack."""
+
+    q = Queue()
+    for _ in range(1, 1000):
+        job = yield from q.enqueue(say_hello)
+        yield from job.delete()
+    yield from q.dequeue()
