@@ -2,7 +2,7 @@ import pytest
 
 from aiorq import Queue
 from aiorq.job import Job
-from fixtures import say_hello
+from fixtures import say_hello, Number
 
 
 def test_create_queue():
@@ -184,3 +184,20 @@ def test_dequeue_deleted_jobs():
         job = yield from q.enqueue(say_hello)
         yield from job.delete()
     yield from q.dequeue()
+
+
+def test_dequeue_instance_method():
+    """Dequeueing instance method jobs from queues."""
+
+    q = Queue()
+    n = Number(2)
+    yield from q.enqueue(n.div, 4)
+
+    job = yield from q.dequeue()
+
+    # The instance has been pickled and unpickled, so it is now a
+    # separate object. Test for equality using each object's __dict__
+    # instead.
+    assert job.instance.__dict__ == n.__dict__
+    assert job.func.__name__ == 'div'
+    assert job.args == (4,)
