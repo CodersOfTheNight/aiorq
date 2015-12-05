@@ -138,3 +138,19 @@ def test_enqueue_sets_metadata():
 
     # Postconditions
     assert job.enqueued_at
+
+
+def test_pop_job_id():
+    """Popping job IDs from queues."""
+
+    # Set up
+    q = Queue()
+    uuid = '112188ae-4e9d-4a5b-a5b3-f26f2cb054da'
+    yield from q.push_job_id(uuid)
+
+    # Pop it off the queue...
+    assert (yield from q.count)
+    assert (yield from q.pop_job_id()) == uuid
+
+    # ...and assert the queue count when down
+    assert not (yield from q.count)

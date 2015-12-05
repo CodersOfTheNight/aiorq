@@ -239,6 +239,12 @@ class Queue:
         yield from self.push_job_id(job.id)
         return job
 
+    @asyncio.coroutine
+    def pop_job_id(self):
+        """Pops a given job ID from this Redis queue."""
+
+        return as_text((yield from self.connection.lpop(self.key)))
+
     def __eq__(self, other):
 
         return self.name == other.name
