@@ -105,3 +105,20 @@ def test_compact(redis):
 
     with pytest.raises(RuntimeError):
         len(q)
+
+
+def test_enqueue(redis):
+    """Enqueueing job onto queues."""
+
+    q = Queue()
+    assert (yield from q.is_empty())
+
+    # say_hello spec holds which queue this is sent to
+    job = yield from q.enqueue(say_hello, 'Nick', foo='bar')
+    job_id = job.id
+    assert job.origin == q.name
+
+    # Inspect data inside Redis
+    q_key = 'rq:queue:default'
+    assert 1 == (yield from redis.llen(q_key))
+    assert job_id == (yield from redis.lrange(q_key, 0, -1))[0].decode('ascii')
