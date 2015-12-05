@@ -13,6 +13,7 @@ import uuid
 
 from rq.job import JobStatus
 from rq.compat import as_text
+from rq.utils import utcnow
 
 from .connections import resolve_connection
 from .exceptions import NoSuchJobError
@@ -223,10 +224,16 @@ class Queue:
     def enqueue_job(self, job):
         """Enqueues a job for delayed execution."""
 
+        # TODO: process pipeline and at_front method arguments.
         pipe = self.connection.pipeline()
         pipe.sadd(self.redis_queues_keys, self.key)
         yield from job.set_status(JobStatus.QUEUED, pipeline=pipe)
+
         job.origin = self.name
+        job.enqueued_at = utcnow()
+
+        # TODO: process job.timeout field.
+
         yield from job.save(pipeline=pipe)
         yield from pipe.execute()
         yield from self.push_job_id(job.id)

@@ -122,3 +122,19 @@ def test_enqueue(redis):
     q_key = 'rq:queue:default'
     assert 1 == (yield from redis.llen(q_key))
     assert job_id == (yield from redis.lrange(q_key, 0, -1))[0].decode('ascii')
+
+
+def test_enqueue_sets_metadata():
+    """Enqueueing job onto queues modifies meta data."""
+
+    q = Queue()
+    job = Job.create(func=say_hello, args=('Nick',), kwargs=dict(foo='bar'))
+
+    # Preconditions
+    assert not job.enqueued_at
+
+    # Action
+    yield from q.enqueue_job(job)
+
+    # Postconditions
+    assert job.enqueued_at
