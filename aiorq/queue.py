@@ -16,7 +16,7 @@ from rq.compat import as_text
 from rq.utils import utcnow
 
 from .connections import resolve_connection
-from .exceptions import NoSuchJobError, UnpickleError
+from .exceptions import NoSuchJobError, UnpickleError, DequeueTimeout
 from .job import Job
 
 
@@ -32,6 +32,19 @@ class Queue:
     job_class = Job
     redis_queue_namespace_prefix = 'rq:queue:'
     redis_queues_keys = 'rq:queues'
+
+    @classmethod
+    def from_queue_key(cls, queue_key, connection=None):
+        """Returns a Queue instance, based on the naming conventions for
+        naming the internal Redis keys.  Can be used to reverse-lookup
+        Queues by their Redis keys.
+        """
+
+        prefix = cls.redis_queue_namespace_prefix
+        if not queue_key.startswith(prefix):
+            raise ValueError('Not a valid RQ queue key: {0}'.format(queue_key))
+        name = queue_key[len(prefix):]
+        return cls(name, connection=connection)
 
     def __init__(self, name='default', connection=None):
 
@@ -245,6 +258,41 @@ class Queue:
 
         return as_text((yield from self.connection.lpop(self.key)))
 
+    @classmethod
+    @asyncio.coroutine
+    def lpop(cls, queue_keys, timeout, connection=None):
+        """Helper method.  Intermediate method to abstract away from some
+        Redis API details, where LPOP accepts only a single key,
+        whereas BLPOP accepts multiple.  So if we want the
+        non-blocking LPOP, we need to iterate over all queues, do
+        individual LPOPs, and return the result.
+
+        Until Redis receives a specific method for this, we'll have to
+        wrap it this way.
+
+        The timeout parameter is interpreted as follows:
+            None - non-blocking (return immediately)
+             > 0 - maximum number of seconds to block
+        """
+
+        connection = resolve_connection(connection)
+        if timeout is not None:  # TODO: test me
+            if timeout == 0:
+                raise ValueError(
+                    'RQ does not support indefinite timeouts. '
+                    'Please pick a timeout value > 0')
+            result = yield from connection.blpop(queue_keys, timeout)
+            if result is None:
+                raise DequeueTimeout(timeout, queue_keys)
+            queue_key, job_id = result
+            return queue_key, job_id
+        else:
+            for queue_key in queue_keys:
+                blob = yield from connection.lpop(queue_key)
+                if blob is not None:
+                    return queue_key, blob
+            return None
+
     @asyncio.coroutine
     def dequeue(self):
         """Dequeues the front-most job from this queue.
@@ -270,6 +318,46 @@ class Queue:
                 e.queue = self
                 raise e
             return job
+
+    @classmethod
+    @asyncio.coroutine
+    def dequeue_any(cls, queues, timeout, connection=None):
+        """Class method returning the job_class instance at the front of the
+        given set of Queues, where the order of the queues is
+        important.
+
+        When all of the Queues are empty, depending on the `timeout`
+        argument, either blocks execution of this function for the
+        duration of the timeout or until new messages arrive on any of
+        the queues, or returns None.
+
+        See the documentation of cls.lpop for the interpretation of
+        timeout.
+        """
+
+        while True:
+            queue_keys = [q.key for q in queues]
+            result = yield from cls.lpop(
+                queue_keys, timeout, connection=connection)
+            if result is None:
+                return None
+            queue_key, job_id = map(as_text, result)
+            queue = cls.from_queue_key(queue_key, connection=connection)
+            try:
+                job = yield from cls.job_class.fetch(
+                    job_id, connection=connection)
+            except NoSuchJobError:
+                # Silently pass on jobs that don't exist (anymore),
+                # and continue in the look
+                continue
+            except UnpickleError as e:
+                # Attach queue information on the exception for
+                # improved error reporting
+                e.job_id = job_id
+                e.queue = queue
+                raise e
+            return job, queue
+        return None, None
 
     def __eq__(self, other):
 

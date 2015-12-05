@@ -231,3 +231,34 @@ def test_dequeue_ignores_nonexisting_jobs():
     assert (yield from q.dequeue()).id == result.id
     assert not (yield from q.dequeue())
     assert not (yield from q.count)
+
+
+def test_dequeue_any():
+    """Fetching work from any given queue."""
+
+    fooq = Queue('foo')
+    barq = Queue('bar')
+
+    assert not (yield from Queue.dequeue_any([fooq, barq], None))
+
+    # Enqueue a single item
+    yield from barq.enqueue(say_hello)
+    job, queue = yield from Queue.dequeue_any([fooq, barq], None)
+    assert job.func == say_hello
+    assert queue == barq
+
+    # Enqueue items on both queues
+    yield from barq.enqueue(say_hello, 'for Bar')
+    yield from fooq.enqueue(say_hello, 'for Foo')
+
+    job, queue = yield from Queue.dequeue_any([fooq, barq], None)
+    assert queue == fooq
+    assert job.func == say_hello
+    assert job.origin == fooq.name
+    assert job.args[0] == 'for Foo', 'Foo should be dequeued first.'
+
+    job, queue = yield from Queue.dequeue_any([fooq, barq], None)
+    assert queue == barq
+    assert job.func == say_hello
+    assert job.origin == barq.name
+    assert job.args[0] == 'for Bar', 'Bar should be dequeued second.'
