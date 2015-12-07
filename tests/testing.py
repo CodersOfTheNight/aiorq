@@ -2,23 +2,20 @@ import asyncio
 import functools
 import gc
 
-from aioredis import create_redis, Redis
+from aioredis import create_redis, RedisConnection
 from rq.local import release_local
 
 from aiorq import pop_connection, push_connection
 from aiorq.connections import _connection_stack
 
 
-class Logger:
+def logger(f):
 
-    def __init__(self, connection):
-
-        self.connection = connection
-
-    def execute(self, command, *args, **kwargs):
+    @functools.wraps(f)
+    def wrapper(self, *args, **kwargs):
 
         logger_args = []
-        for arg in (command,) + args:
+        for arg in args:
             if hasattr(arg, 'decode'):
                 try:
                     arg = arg.decode()
@@ -26,20 +23,20 @@ class Logger:
                     pass
             logger_args.append(arg)
         print('>>>', *logger_args)
-        return self.connection.execute(command, *args, **kwargs)
+        return f(self, *args, **kwargs)
 
-    def __getattr__(self, name):
+    return wrapper
 
-        return getattr(self.connection, name)
+
+# Don't Try This at Home...
+RedisConnection.execute = logger(RedisConnection.execute)
 
 
 @asyncio.coroutine
 def find_connection(loop):
     """Get test redis connection."""
 
-    commands_factory = lambda connection: Redis(Logger(connection))
-    kwargs = {'loop': loop, 'commands_factory': commands_factory}
-    return (yield from create_redis(('localhost', 6379), **kwargs))
+    return (yield from create_redis(('localhost', 6379), loop=loop))
 
 
 def async_test(f):
