@@ -1,0 +1,21 @@
+language: python
+python:
+  - 3.4
+services:
+  - redis
+env:
+  global:
+    - PYTHONASYNCIODEBUG=1
+cache:
+  directories:
+  - $HOME/.cache/pip
+before_cache:
+  - rm -f $HOME/.cache/pip/log/debug.log
+install:
+  - pip install .
+  - pip install -r requirements/test.txt
+  - pip install -r requirements/ci.txt
+script:
+  - py.test --cov . test/
+after_success:
+  - coveralls
