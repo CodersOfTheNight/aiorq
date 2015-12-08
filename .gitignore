@@ -5,3 +5,4 @@ dist/
 .cache/
 .tox/
 __pycache__/
+.coverage
