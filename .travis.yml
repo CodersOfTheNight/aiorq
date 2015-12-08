@@ -12,6 +12,7 @@ cache:
 before_cache:
   - rm -f $HOME/.cache/pip/log/debug.log
 install:
+  - pip install -U pip wheel
   - pip install .
   - pip install -r requirements/test.txt
   - pip install -r requirements/ci.txt
