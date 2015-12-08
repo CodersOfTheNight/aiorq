@@ -14,7 +14,7 @@ before_cache:
 install:
   - pip install -U pip wheel
   - pip install .
-  - pip install -r requirements/test.txt
+  - pip install -r requirements/qa.txt
   - pip install -r requirements/ci.txt
 script:
   - py.test --cov . tests/
