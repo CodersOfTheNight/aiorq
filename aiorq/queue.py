@@ -11,6 +11,7 @@
 import asyncio
 import uuid
 
+from aioredis import MultiExecError
 from rq.job import JobStatus
 from rq.compat import as_text
 from rq.utils import utcnow
@@ -221,6 +222,7 @@ class Queue:
         timeout = kwargs.pop('timeout', None)
         result_ttl = kwargs.pop('result_ttl', None)
         ttl = kwargs.pop('ttl', None)
+        depends_on = kwargs.pop('depends_on', None)
         job_id = kwargs.pop('job_id', None)
 
         if 'args' in kwargs or 'kwargs' in kwargs:
@@ -231,11 +233,12 @@ class Queue:
 
         return (yield from self.enqueue_call(
             func=f, args=args, kwargs=kwargs, timeout=timeout,
-            result_ttl=result_ttl, ttl=ttl, job_id=job_id))
+            result_ttl=result_ttl, ttl=ttl, job_id=job_id,
+            depends_on=depends_on))
 
     @asyncio.coroutine
     def enqueue_call(self, func, args=None, kwargs=None, timeout=None,
-                     result_ttl=None, ttl=None, job_id=None):
+                     result_ttl=None, ttl=None, job_id=None, depends_on=None):
         """Creates a job to represent the delayed function call and enqueues
         it.
 
@@ -247,16 +250,45 @@ class Queue:
         job = self.job_class.create(
             func, args=args, kwargs=kwargs, timeout=timeout,
             connection=self.connection, result_ttl=result_ttl, ttl=ttl,
-            id=job_id)
+            id=job_id, depends_on=depends_on, origin=self.name)
+
+        # If job depends on an unfinished job, register itself on it's
+        # parent's dependents instead of enqueueing it.  If
+        # MultiExecError is raised in the process, that means
+        # something else is modifying the dependency.  In this case we
+        # simply retry.
+        if depends_on is not None:
+            if not isinstance(depends_on, self.job_class):
+                depends_on = Job(id=depends_on, connection=self.connection)
+            while True:
+                try:
+                    self.connection.watch(depends_on.key)
+                    dependency_status = yield from depends_on.get_status()
+                    if dependency_status != JobStatus.FINISHED:
+                        yield from job.set_status(JobStatus.DEFERRED)
+                        multi = self.connection.multi_exec()
+                        # NOTE: we need to use yield from in the two
+                        # lines below because they are coroutines, but
+                        # there are no inner yield from on multi since
+                        # we specify pipeline mode.
+                        yield from job.register_dependency(pipeline=multi)
+                        yield from job.save(pipeline=multi)
+                        yield from multi.execute()
+                        return job
+                    break
+                except MultiExecError:
+                    continue
+
         job = yield from self.enqueue_job(job)
+
         return job
 
     @asyncio.coroutine
-    def enqueue_job(self, job):
+    def enqueue_job(self, job, pipeline=None):
         """Enqueues a job for delayed execution."""
 
-        # TODO: process pipeline and at_front method arguments.
-        pipe = self.connection.pipeline()
+        # TODO: process at_front method arguments.
+        pipe = pipeline if pipeline else self.connection.pipeline()
         pipe.sadd(self.redis_queues_keys, self.key)
         yield from job.set_status(JobStatus.QUEUED, pipeline=pipe)
 
@@ -266,9 +298,38 @@ class Queue:
         # TODO: process job.timeout field.
 
         yield from job.save(pipeline=pipe)
-        yield from pipe.execute()
+        if not pipeline:
+            yield from pipe.execute()
         yield from self.push_job_id(job.id)
         return job
+
+    @asyncio.coroutine
+    def enqueue_dependents(self, job):
+        """Enqueues all jobs in the given job's dependents set and clears it.
+        """
+
+        # TODO: can probably be pipelined
+        from .registry import DeferredJobRegistry
+
+        while True:
+            job_id = yield from self.connection.spop(job.dependents_key)
+            job_id = as_text(job_id)
+            if job_id is None:
+                break
+
+            dependent = yield from self.job_class.fetch(
+                job_id, connection=self.connection)
+            registry = DeferredJobRegistry(dependent.origin, self.connection)
+
+            pipe = self.connection.pipeline()
+            yield from registry.remove(dependent, pipeline=pipe)
+            if dependent.origin == self.name:
+                yield from self.enqueue_job(dependent, pipeline=pipe)
+            else:
+                queue = Queue(name=dependent.origin,
+                              connection=self.connection)
+                yield from queue.enqueue_job(dependent, pipeline=pipe)
+            yield from pipe.execute()
 
     @asyncio.coroutine
     def pop_job_id(self):

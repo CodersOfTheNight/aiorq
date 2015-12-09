@@ -47,10 +47,11 @@ class Job(SynchronousJob):
     def set_status(self, status, pipeline=None):
         """Set job status asynchronously."""
 
-        # TODO: yield from if pipeline is none
         self._status = status
-        connection = pipeline
-        connection.hset(self.key, 'status', self._status)
+        connection = pipeline if pipeline else self.connection
+        coroutine = connection.hset(self.key, 'status', self._status)
+        if not pipeline:
+            yield from coroutine
 
     @classmethod
     @asyncio.coroutine
@@ -191,8 +192,8 @@ class Job(SynchronousJob):
         coroutine = connection.hmset(key, *fields)
         if not pipeline:
             yield from coroutine
-        # TODO: don't pass connection if pipeline is none
-        yield from self.cleanup(self.ttl, pipeline=connection)
+        kwargs = {'pipeline': connection} if pipeline else {}
+        yield from self.cleanup(self.ttl, **kwargs)
 
     @asyncio.coroutine
     def register_dependency(self, pipeline=None):
@@ -211,10 +212,11 @@ class Job(SynchronousJob):
         registry = DeferredJobRegistry(self.origin, connection=self.connection)
         yield from registry.add(self, pipeline=pipeline)
 
-        # TODO: don't yield from if pipeline is on
-        connection = self.connection
-        yield from connection.sadd(
-            Job.dependents_key_for(self._dependency_id), self.id)
+        connection = pipeline if pipeline else self.connection
+        key = Job.dependents_key_for(self._dependency_id)
+        coroutine = connection.sadd(key, self.id)
+        if not pipeline:
+            yield from coroutine
 
     @asyncio.coroutine
     def cleanup(self, ttl=None, pipeline=None):

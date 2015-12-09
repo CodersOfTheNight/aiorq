@@ -16,7 +16,7 @@ from rq.utils import current_timestamp
 from .connections import resolve_connection
 
 
-class BaseRegistry(object):
+class BaseRegistry:
     """Base implementation of a job registry, implemented in Redis sorted set.
 
     Each job is stored as a key in the registry, scored by expiration
@@ -24,6 +24,7 @@ class BaseRegistry(object):
     """
 
     def __init__(self, name='default', connection=None):
+
         self.name = name
         self.connection = resolve_connection(connection)
 
@@ -32,11 +33,19 @@ class BaseRegistry(object):
         """Adds a job to a registry with expiry time of now + ttl."""
 
         score = ttl if ttl < 0 else current_timestamp() + ttl
-        # TODO: support pipeline mode
-        # if pipeline is not None:
-        #     return pipeline.zadd(self.key, score, job.id)
+        connection = pipeline if pipeline else self.connection
+        coroutine = connection.zadd(self.key, score, job.id)
+        if not pipeline:
+            return (yield from coroutine)
 
-        return (yield from self.connection.zadd(self.key, score, job.id))
+    @asyncio.coroutine
+    def remove(self, job, pipeline=None):
+        """Removes a job from registry."""
+
+        connection = pipeline if pipeline else self.connection
+        coroutine = connection.zrem(self.key, job.id)
+        if not pipeline:
+            return (yield from coroutine)
 
     @asyncio.coroutine
     def get_job_ids(self, start=0, end=-1):

@@ -6,6 +6,7 @@ from rq.job import JobStatus
 
 from aiorq import Queue
 from aiorq.job import Job
+from aiorq.registry import DeferredJobRegistry
 from fixtures import say_hello, Number, echo
 
 
@@ -341,3 +342,27 @@ def test_all_queues():
 
     # Queue.all() should still report the empty queues
     assert len((yield from Queue.all())) == 3
+
+
+def test_enqueue_dependents(redis):
+    """Enqueueing dependent jobs pushes all jobs in the depends set to the
+    queue and removes them from DeferredJobQueue.
+    """
+
+    q = Queue()
+    parent_job = Job.create(func=say_hello)
+    yield from parent_job.save()
+    job_1 = yield from q.enqueue(say_hello, depends_on=parent_job)
+    job_2 = yield from q.enqueue(say_hello, depends_on=parent_job)
+
+    registry = DeferredJobRegistry(q.name, connection=redis)
+    assert set((yield from registry.get_job_ids())) == {job_1.id, job_2.id}
+
+    # After dependents is enqueued, job_1 and job_2 should be in queue
+    assert not (yield from q.job_ids)
+    yield from q.enqueue_dependents(parent_job)
+    assert set((yield from q.job_ids)) == {job_2.id, job_1.id}
+    assert not (yield from redis.exists(parent_job.dependents_key))
+
+    # DeferredJobRegistry should also be empty
+    assert not (yield from registry.get_job_ids())
