@@ -366,3 +366,36 @@ def test_enqueue_dependents(redis):
 
     # DeferredJobRegistry should also be empty
     assert not (yield from registry.get_job_ids())
+
+
+def test_enqueue_dependents_on_multiple_queues(redis):
+    """Enqueueing dependent jobs on multiple queues pushes jobs in the
+    queues and removes them from DeferredJobRegistry for each
+    different queue.
+    """
+
+    q1 = Queue("queue_1")
+    q2 = Queue("queue_2")
+    parent_job = Job.create(func=say_hello)
+    yield from parent_job.save()
+    job_1 = yield from q1.enqueue(say_hello, depends_on=parent_job)
+    job_2 = yield from q2.enqueue(say_hello, depends_on=parent_job)
+
+    # Each queue has its own DeferredJobRegistry
+    registry_1 = DeferredJobRegistry(q1.name, connection=redis)
+    assert set((yield from registry_1.get_job_ids())) == {job_1.id}
+    registry_2 = DeferredJobRegistry(q2.name, connection=redis)
+    assert set((yield from registry_2.get_job_ids())) == {job_2.id}
+
+    # After dependents is enqueued, job_1 on q1 and job_2 should be in q2
+    assert not (yield from q1.job_ids)
+    assert not (yield from q2.job_ids)
+    yield from q1.enqueue_dependents(parent_job)
+    yield from q2.enqueue_dependents(parent_job)
+    assert set((yield from q1.job_ids)) == {job_1.id}
+    assert set((yield from q2.job_ids)) == {job_2.id}
+    assert not (yield from redis.exists(parent_job.dependents_key))
+
+    # DeferredJobRegistry should also be empty
+    assert not (yield from registry_1.get_job_ids())
+    assert not (yield from registry_2.get_job_ids())
