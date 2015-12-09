@@ -1,6 +1,6 @@
 """
     aiorq.job
-    ~~~~~~~~~~~~~~~~~
+    ~~~~~~~~~
 
     This module implement serializable deferred jobs.
 
