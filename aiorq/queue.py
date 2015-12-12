@@ -31,6 +31,7 @@ class Queue:
     """asyncio job queue."""
 
     job_class = Job
+    DEFAULT_TIMEOUT = 180
     redis_queue_namespace_prefix = 'rq:queue:'
     redis_queues_keys = 'rq:queues'
 
@@ -295,7 +296,8 @@ class Queue:
         job.origin = self.name
         job.enqueued_at = utcnow()
 
-        # TODO: process job.timeout field.
+        if job.timeout is None:
+            job.timeout = self.DEFAULT_TIMEOUT
 
         yield from job.save(pipeline=pipe)
         if not pipeline:

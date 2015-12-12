@@ -399,3 +399,22 @@ def test_enqueue_dependents_on_multiple_queues(redis):
     # DeferredJobRegistry should also be empty
     assert not (yield from registry_1.get_job_ids())
     assert not (yield from registry_2.get_job_ids())
+
+
+def test_enqueue_job_with_dependency():
+    """Jobs are enqueued only when their dependencies are finished."""
+
+    # Job with unfinished dependency is not immediately enqueued
+    parent_job = Job.create(func=say_hello)
+    q = Queue()
+    job = yield from q.enqueue_call(say_hello, depends_on=parent_job)
+    assert not (yield from q.job_ids)
+    assert (yield from job.get_status()) == JobStatus.DEFERRED
+
+    # Jobs dependent on finished jobs are immediately enqueued
+    yield from parent_job.set_status(JobStatus.FINISHED)
+    yield from parent_job.save()
+    job = yield from q.enqueue_call(say_hello, depends_on=parent_job)
+    assert (yield from q.job_ids) == [job.id]
+    assert job.timeout == Queue.DEFAULT_TIMEOUT
+    assert (yield from job.get_status()) == JobStatus.QUEUED
