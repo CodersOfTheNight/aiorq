@@ -418,3 +418,19 @@ def test_enqueue_job_with_dependency():
     assert (yield from q.job_ids) == [job.id]
     assert job.timeout == Queue.DEFAULT_TIMEOUT
     assert (yield from job.get_status()) == JobStatus.QUEUED
+
+
+def test_enqueue_job_with_dependency_by_id():
+    """"Can specify job dependency with job object or job id."""
+
+    parent_job = Job.create(func=say_hello)
+    q = Queue()
+    yield from q.enqueue_call(say_hello, depends_on=parent_job.id)
+    assert not (yield from q.job_ids)
+
+    # Jobs dependent on finished jobs are immediately enqueued
+    yield from parent_job.set_status(JobStatus.FINISHED)
+    yield from parent_job.save()
+    job = yield from q.enqueue_call(say_hello, depends_on=parent_job.id)
+    assert (yield from q.job_ids) == [job.id]
+    assert job.timeout == Queue.DEFAULT_TIMEOUT
