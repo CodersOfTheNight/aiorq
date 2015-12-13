@@ -4,10 +4,10 @@ from rq import (Worker as SynchronousWorker,
                 Queue as SynchronousQueue)
 from rq.job import JobStatus
 
-from aiorq import Queue
+from aiorq import Queue, get_failed_queue
 from aiorq.job import Job
 from aiorq.registry import DeferredJobRegistry
-from fixtures import say_hello, Number, echo
+from fixtures import say_hello, Number, echo, div_by_zero
 
 
 def test_create_queue():
@@ -454,3 +454,23 @@ def test_enqueue_job_with_dependency_and_timeout():
                                     timeout=123)
     assert (yield from q.job_ids) == [job.id]
     assert job.timeout == 123
+
+
+# Failed queue tests.
+
+
+def test_requeue_job():
+    """Requeueing existing jobs."""
+
+    job = Job.create(func=div_by_zero, args=(1, 2, 3))
+    job.origin = 'fake'
+    yield from job.save()
+    yield from get_failed_queue().quarantine(job, Exception('Some fake error'))
+
+    assert (yield from Queue.all()) == [get_failed_queue()]
+    assert (yield from get_failed_queue().count) == 1
+
+    yield from get_failed_queue().requeue(job.id)
+
+    assert not (yield from get_failed_queue().count)
+    assert (yield from Queue('fake').count) == 1

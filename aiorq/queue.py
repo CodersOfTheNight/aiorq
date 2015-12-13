@@ -202,8 +202,11 @@ class Queue:
         of the back of the queue
         """
 
-        # TODO: implement pipeline and at_front behavior
-        yield from self.connection.rpush(self.key, job_id)
+        # TODO: implement at_front behavior
+        connection = pipeline if pipeline else self.connection
+        coroutine = connection.rpush(self.key, job_id)
+        if not pipeline:
+            yield from coroutine
 
     @asyncio.coroutine
     def enqueue(self, f, *args, **kwargs):
@@ -452,3 +455,46 @@ class FailedQueue(Queue):
     def __init__(self, connection=None):
 
         super().__init__(JobStatus.FAILED, connection=connection)
+
+    @asyncio.coroutine
+    def quarantine(self, job, exc_info):
+        """Puts the given Job in quarantine (i.e. put it on the failed queue).
+        """
+
+        # Add Queue key set
+        yield from self.connection.sadd(self.redis_queues_keys, self.key)
+
+        job.ended_at = utcnow()
+        # NOTE: we can't pass exception instance directly to aioredis
+        # command execution as we can with StrictRedis.  StrictRedis
+        # client make internal cast all non string values to the
+        # string.  So we need to do it explicitly.
+        job.exc_info = str(exc_info)
+        pipe = self.connection.pipeline()  # TODO: use multi_exec here?
+        yield from job.save(pipeline=pipe)
+
+        yield from self.push_job_id(job.id, pipeline=pipe)
+        yield from pipe.execute()
+
+        return job
+
+    @asyncio.coroutine
+    def requeue(self, job_id):
+        """Requeues the job with the given job ID."""
+
+        try:
+            job = yield from self.job_class.fetch(
+                job_id, connection=self.connection)
+        except NoSuchJobError:
+            # Silently ignore/remove this job and return (i.e. do nothing)
+            yield from self.remove(job_id)
+            return
+
+        # Delete it from the failed queue (raise an error if that failed)
+        if not (yield from self.remove(job)):
+            raise InvalidJobOperationError('Cannot requeue non-failed jobs')
+
+        yield from job.set_status(JobStatus.QUEUED)
+        job.exc_info = None
+        q = Queue(job.origin, connection=self.connection)
+        yield from q.enqueue_job(job)

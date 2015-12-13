@@ -59,3 +59,8 @@ class UnicodeStringObject(object):
     def __repr__(self):
 
         return 'é'
+
+
+def div_by_zero(x):
+
+    return x / 0
