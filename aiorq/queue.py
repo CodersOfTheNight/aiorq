@@ -14,7 +14,7 @@ import uuid
 from aioredis import MultiExecError
 from rq.job import JobStatus
 from rq.compat import as_text
-from rq.utils import utcnow
+from rq.utils import utcnow, import_attribute
 
 from .connections import resolve_connection
 from .exceptions import (NoSuchJobError, UnpickleError,
@@ -63,12 +63,17 @@ class Queue:
         name = queue_key[len(prefix):]
         return cls(name, connection=connection)
 
-    def __init__(self, name='default', connection=None):
+    def __init__(self, name='default', connection=None, job_class=None):
 
         self.connection = resolve_connection(connection)
         prefix = self.redis_queue_namespace_prefix
         self.name = name
         self._key = '{0}{1}'.format(prefix, name)
+
+        if job_class is not None:
+            if isinstance(job_class, str):
+                job_class = import_attribute(job_class)
+            self.job_class = job_class
 
     def __len__(self):
         """Queue length."""

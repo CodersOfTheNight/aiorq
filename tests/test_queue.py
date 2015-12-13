@@ -25,6 +25,16 @@ def test_create_named_queue():
     assert q.name == 'my-queue'
 
 
+def test_custom_job_class():
+    """Ensure custom job class assignment works as expected."""
+
+    class CustomJob(Job):
+        pass
+
+    q = Queue(job_class=CustomJob)
+    assert q.job_class == CustomJob
+
+
 def test_equality():
     """Mathematical equality of queues."""
 
