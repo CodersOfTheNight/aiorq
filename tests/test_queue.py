@@ -512,3 +512,15 @@ def test_requeueing_preserves_timeout():
 
     job = yield from Job.fetch(job.id)
     assert job.timeout == 200
+
+
+def test_requeue_sets_status_to_queued():
+    """Requeueing a job should set its status back to QUEUED."""
+
+    job = Job.create(func=div_by_zero, args=(1, 2, 3))
+    yield from job.save()
+    yield from get_failed_queue().quarantine(job, Exception('Some fake error'))
+    yield from get_failed_queue().requeue(job.id)
+
+    job = yield from Job.fetch(job.id)
+    assert (yield from job.get_status()) == JobStatus.QUEUED
