@@ -5,6 +5,7 @@ from rq import (Worker as SynchronousWorker,
 from rq.job import JobStatus
 
 from aiorq import Queue, get_failed_queue
+from aiorq.exceptions import InvalidJobOperationError
 from aiorq.job import Job
 from aiorq.registry import DeferredJobRegistry
 from fixtures import say_hello, Number, echo, div_by_zero
@@ -474,3 +475,14 @@ def test_requeue_job():
 
     assert not (yield from get_failed_queue().count)
     assert (yield from Queue('fake').count) == 1
+
+
+def test_requeue_nonfailed_job_fails():
+    """Requeueing non-failed jobs raises error."""
+
+    q = Queue()
+    job = yield from q.enqueue(say_hello, 'Nick', foo='bar')
+
+    # Assert that we cannot requeue a job that's not on the failed queue
+    with pytest.raises(InvalidJobOperationError):
+        yield from get_failed_queue().requeue(job.id)

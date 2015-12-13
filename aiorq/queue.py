@@ -17,7 +17,8 @@ from rq.compat import as_text
 from rq.utils import utcnow
 
 from .connections import resolve_connection
-from .exceptions import NoSuchJobError, UnpickleError, DequeueTimeout
+from .exceptions import (NoSuchJobError, UnpickleError,
+                         DequeueTimeout, InvalidJobOperationError)
 from .job import Job
 
 
