@@ -34,6 +34,18 @@ def loop():
     pass
 
 
+@pytest.fixture
+def registry():
+    """Suppress pytest errors about missing fixtures.
+
+    Actual StartedJobRegistry instance will be inserted by
+    asynchronous test decorator instead of this fixture.
+
+    """
+
+    pass
+
+
 def pytest_pycollect_makeitem(collector, name, obj):
 
     # Collect generators as regular tests.

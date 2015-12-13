@@ -56,6 +56,22 @@ class BaseRegistry:
                 (yield from self.connection.zrange(self.key, start, end))]
 
 
+class StartedJobRegistry(BaseRegistry):
+    """Registry of currently executing jobs.
+
+    Each queue maintains a StartedJobRegistry. Jobs in this registry
+    are ones that are currently being executed.
+
+    Jobs are added to registry right before they are executed and
+    removed right after completion (success or failure).
+
+    """
+
+    def __init__(self, name='default', connection=None):
+        super().__init__(name, connection)
+        self.key = 'rq:wip:{0}'.format(name)
+
+
 class DeferredJobRegistry(BaseRegistry):
     """Registry of deferred jobs (waiting for another job to finish)."""
 

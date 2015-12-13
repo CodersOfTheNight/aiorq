@@ -7,6 +7,7 @@ from rq.local import release_local
 
 from aiorq import pop_connection, push_connection
 from aiorq.connections import _connection_stack
+from aiorq.registry import StartedJobRegistry
 
 
 def logger(f):
@@ -53,6 +54,8 @@ def async_test(f):
                 kwargs['redis'] = redis
             if 'loop' in kwargs:
                 kwargs['loop'] = loop
+            if 'registry' in kwargs:
+                kwargs['registry'] = StartedJobRegistry(connection=redis)
             try:
                 yield from asyncio.coroutine(f)(**kwargs)
             except Exception:
