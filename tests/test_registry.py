@@ -20,3 +20,12 @@ def test_add_and_remove(redis, registry):
     # Ensure that job is properly removed from sorted set
     yield from registry.remove(job)
     assert not (yield from redis.zscore(registry.key, job.id))
+
+
+def test_get_job_ids(redis, registry):
+    """Getting job ids from StartedJobRegistry."""
+
+    timestamp = current_timestamp()
+    yield from redis.zadd(registry.key, timestamp + 10, 'foo')
+    yield from redis.zadd(registry.key, timestamp + 20, 'bar')
+    assert (yield from registry.get_job_ids()) == ['foo', 'bar']

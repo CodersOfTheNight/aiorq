@@ -11,9 +11,13 @@
 import asyncio
 
 from rq.compat import as_text
+from rq.job import JobStatus
 from rq.utils import current_timestamp
 
 from .connections import resolve_connection
+from .exceptions import NoSuchJobError
+from .job import Job
+from .queue import FailedQueue
 
 
 class BaseRegistry:
@@ -48,6 +52,19 @@ class BaseRegistry:
             return (yield from coroutine)
 
     @asyncio.coroutine
+    def get_expired_job_ids(self, timestamp=None):
+        """Returns job ids whose score are less than current timestamp.
+
+        Returns ids for jobs with an expiry time earlier than
+        timestamp, specified as seconds since the Unix
+        epoch. timestamp defaults to call time if unspecified.
+        """
+
+        score = timestamp if timestamp is not None else current_timestamp()
+        return [as_text(job_id) for job_id in
+                (yield from self.connection.zrangebyscore(self.key, 0, score))]
+
+    @asyncio.coroutine
     def get_job_ids(self, start=0, end=-1):
         """Returns list of all job ids."""
 
@@ -70,6 +87,38 @@ class StartedJobRegistry(BaseRegistry):
     def __init__(self, name='default', connection=None):
         super().__init__(name, connection)
         self.key = 'rq:wip:{0}'.format(name)
+
+    @asyncio.coroutine
+    def cleanup(self, timestamp=None):
+        """Remove expired jobs from registry and add them to FailedQueue.
+
+        Removes jobs with an expiry time earlier than timestamp,
+        specified as seconds since the Unix epoch. timestamp defaults
+        to call time if unspecified. Removed jobs are added to the
+        global failed job queue.
+        """
+
+        score = timestamp if timestamp else current_timestamp()
+        job_ids = yield from self.get_expired_job_ids(score)
+
+        if job_ids:
+            failed_queue = FailedQueue(connection=self.connection)
+
+            for job_id in job_ids:
+                multi = self.connection.multi_exec()
+                try:
+                    job = yield from Job.fetch(
+                        job_id, connection=self.connection)
+                    yield from job.set_status(JobStatus.FAILED)
+                    yield from job.save(pipeline=multi)
+                    yield from failed_queue.push_job_id(job_id, pipeline=multi)
+                except NoSuchJobError:
+                    pass
+
+                multi.zremrangebyscore(self.key, 0, score)
+                yield from multi.execute()
+
+        return job_ids
 
 
 class DeferredJobRegistry(BaseRegistry):
