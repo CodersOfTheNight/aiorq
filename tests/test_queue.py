@@ -486,3 +486,15 @@ def test_requeue_nonfailed_job_fails():
     # Assert that we cannot requeue a job that's not on the failed queue
     with pytest.raises(InvalidJobOperationError):
         yield from get_failed_queue().requeue(job.id)
+
+
+def test_quarantine_preserves_timeout():
+    """Quarantine preserves job timeout."""
+
+    job = Job.create(func=div_by_zero, args=(1, 2, 3))
+    job.origin = 'fake'
+    job.timeout = 200
+    yield from job.save()
+    yield from get_failed_queue().quarantine(job, Exception('Some fake error'))
+
+    assert job.timeout == 200
