@@ -534,3 +534,15 @@ def test_requeue_sets_status_to_queued():
 
     job = yield from Job.fetch(job.id)
     assert (yield from job.get_status()) == JobStatus.QUEUED
+
+
+def test_skip_queue():
+    """Ensure the skip_queue option functions"""
+
+    q = Queue('foo')
+    job1 = yield from q.enqueue(say_hello)
+    job2 = yield from q.enqueue(say_hello)
+    assert (yield from q.dequeue()) == job1
+    skip_job = yield from q.enqueue(say_hello, at_front=True)
+    assert (yield from q.dequeue()) == skip_job
+    assert (yield from q.dequeue()) == job2

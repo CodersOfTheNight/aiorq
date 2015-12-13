@@ -208,9 +208,11 @@ class Queue:
         of the back of the queue
         """
 
-        # TODO: implement at_front behavior
         connection = pipeline if pipeline else self.connection
-        coroutine = connection.rpush(self.key, job_id)
+        if at_front:
+            coroutine = connection.lpush(self.key, job_id)
+        else:
+            coroutine = connection.rpush(self.key, job_id)
         if not pipeline:
             yield from coroutine
 
@@ -235,6 +237,7 @@ class Queue:
         ttl = kwargs.pop('ttl', None)
         depends_on = kwargs.pop('depends_on', None)
         job_id = kwargs.pop('job_id', None)
+        at_front = kwargs.pop('at_front', None)
 
         if 'args' in kwargs or 'kwargs' in kwargs:
             assert args == (), ('Extra positional arguments cannot be used '
@@ -244,12 +247,13 @@ class Queue:
 
         return (yield from self.enqueue_call(
             func=f, args=args, kwargs=kwargs, timeout=timeout,
-            result_ttl=result_ttl, ttl=ttl, job_id=job_id,
+            result_ttl=result_ttl, ttl=ttl, job_id=job_id, at_front=at_front,
             depends_on=depends_on))
 
     @asyncio.coroutine
     def enqueue_call(self, func, args=None, kwargs=None, timeout=None,
-                     result_ttl=None, ttl=None, job_id=None, depends_on=None):
+                     result_ttl=None, ttl=None, job_id=None, at_front=False,
+                     depends_on=None):
         """Creates a job to represent the delayed function call and enqueues
         it.
 
@@ -290,15 +294,14 @@ class Queue:
                 except MultiExecError:
                     continue
 
-        job = yield from self.enqueue_job(job)
+        job = yield from self.enqueue_job(job, at_front=at_front)
 
         return job
 
     @asyncio.coroutine
-    def enqueue_job(self, job, pipeline=None):
+    def enqueue_job(self, job, pipeline=None, at_front=False):
         """Enqueues a job for delayed execution."""
 
-        # TODO: process at_front method arguments.
         pipe = pipeline if pipeline else self.connection.pipeline()
         pipe.sadd(self.redis_queues_keys, self.key)
         yield from job.set_status(JobStatus.QUEUED, pipeline=pipe)
@@ -312,7 +315,7 @@ class Queue:
         yield from job.save(pipeline=pipe)
         if not pipeline:
             yield from pipe.execute()
-        yield from self.push_job_id(job.id)
+        yield from self.push_job_id(job.id, at_front=at_front)
         return job
 
     @asyncio.coroutine
