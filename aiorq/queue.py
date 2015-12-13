@@ -36,6 +36,7 @@ class Queue:
     redis_queues_keys = 'rq:queues'
 
     @classmethod
+    @asyncio.coroutine
     def all(cls, connection=None):
         """Returns an iterable of all Queues."""
 
