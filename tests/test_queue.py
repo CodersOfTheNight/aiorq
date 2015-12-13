@@ -498,3 +498,17 @@ def test_quarantine_preserves_timeout():
     yield from get_failed_queue().quarantine(job, Exception('Some fake error'))
 
     assert job.timeout == 200
+
+
+def test_requeueing_preserves_timeout():
+    """Requeueing preserves job timeout."""
+
+    job = Job.create(func=div_by_zero, args=(1, 2, 3))
+    job.origin = 'fake'
+    job.timeout = 200
+    yield from job.save()
+    yield from get_failed_queue().quarantine(job, Exception('Some fake error'))
+    yield from get_failed_queue().requeue(job.id)
+
+    job = yield from Job.fetch(job.id)
+    assert job.timeout == 200
