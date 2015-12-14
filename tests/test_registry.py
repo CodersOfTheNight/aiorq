@@ -25,3 +25,16 @@ def test_get_job_ids(redis, registry, timestamp):
     yield from redis.zadd(registry.key, timestamp + 10, 'foo')
     yield from redis.zadd(registry.key, timestamp + 20, 'bar')
     assert (yield from registry.get_job_ids()) == ['foo', 'bar']
+
+
+def test_get_expired_job_ids(redis, registry, timestamp):
+    """Getting expired job ids form StartedJobRegistry."""
+
+    yield from redis.zadd(registry.key, 1, 'foo')
+    yield from redis.zadd(registry.key, timestamp + 10, 'bar')
+    yield from redis.zadd(registry.key, timestamp + 30, 'baz')
+
+    expired = yield from registry.get_expired_job_ids()
+    assert expired == ['foo']
+    expired = yield from registry.get_expired_job_ids(timestamp + 20)
+    assert expired == ['foo', 'bar']
