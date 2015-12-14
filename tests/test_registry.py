@@ -1,12 +1,9 @@
-from rq.utils import current_timestamp
-
 from aiorq.job import Job
 
 
-def test_add_and_remove(redis, registry):
+def test_add_and_remove(redis, registry, timestamp):
     """Adding and removing job to StartedJobRegistry."""
 
-    timestamp = current_timestamp()
     job = Job()
 
     # Test that job is added with the right score
@@ -22,10 +19,9 @@ def test_add_and_remove(redis, registry):
     assert not (yield from redis.zscore(registry.key, job.id))
 
 
-def test_get_job_ids(redis, registry):
+def test_get_job_ids(redis, registry, timestamp):
     """Getting job ids from StartedJobRegistry."""
 
-    timestamp = current_timestamp()
     yield from redis.zadd(registry.key, timestamp + 10, 'foo')
     yield from redis.zadd(registry.key, timestamp + 20, 'bar')
     assert (yield from registry.get_job_ids()) == ['foo', 'bar']

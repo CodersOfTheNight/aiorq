@@ -2,6 +2,7 @@ import sys
 from os.path import dirname, abspath
 
 import pytest
+from rq.utils import current_timestamp
 
 
 sys.path.append(dirname(abspath(__file__)))
@@ -44,6 +45,13 @@ def registry():
     """
 
     pass
+
+
+@pytest.fixture
+def timestamp():
+    """Current timestamp."""
+
+    return current_timestamp()
 
 
 def pytest_pycollect_makeitem(collector, name, obj):
