@@ -1,8 +1,11 @@
 from rq.job import JobStatus
+from rq import (Worker as SynchronousWorker,
+                Connection as SynchronousConnection,
+                Queue as SynchronousQueue)
 
 from aiorq.job import Job
 from aiorq.queue import Queue, FailedQueue
-from fixtures import say_hello
+from fixtures import say_hello, div_by_zero
 
 
 def test_add_and_remove(redis, registry, timestamp):
@@ -64,3 +67,28 @@ def test_cleanup(redis, registry):
     assert not (yield from redis.zscore(registry.key, job.id))
     yield from job.refresh()
     assert (yield from job.get_status()) == JobStatus.FAILED
+
+
+def test_job_execution(redis, registry):
+    """Job is removed from StartedJobRegistry after execution."""
+
+    queue = Queue(connection=redis)
+    with SynchronousConnection():
+        worker = SynchronousWorker(SynchronousQueue())
+
+    job = yield from queue.enqueue(say_hello)
+
+    worker.prepare_job_execution(job)
+    assert job.id in (yield from registry.get_job_ids())
+
+    worker.perform_job(job)
+    assert job.id not in (yield from registry.get_job_ids())
+
+    # Job that fails
+    job = yield from queue.enqueue(div_by_zero)
+
+    worker.prepare_job_execution(job)
+    assert job.id in (yield from registry.get_job_ids())
+
+    worker.perform_job(job)
+    assert job.id not in (yield from registry.get_job_ids())
