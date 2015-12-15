@@ -32,6 +32,19 @@ class BaseRegistry:
         self.name = name
         self.connection = resolve_connection(connection)
 
+    def __len__(self):
+
+        raise RuntimeError('Do not use `len` on asynchronous registries'
+                           ' (use registry.count instead).')
+
+    @property
+    @asyncio.coroutine
+    def count(self):
+        """Returns the number of jobs in this registry."""
+
+        yield from self.cleanup()
+        return (yield from self.connection.zcard(self.key))
+
     @asyncio.coroutine
     def add(self, job, ttl=0, pipeline=None):
         """Adds a job to a registry with expiry time of now + ttl."""

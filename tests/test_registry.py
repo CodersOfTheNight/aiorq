@@ -1,3 +1,4 @@
+import pytest
 from rq.job import JobStatus
 from rq import (Worker as SynchronousWorker,
                 Connection as SynchronousConnection,
@@ -92,3 +93,14 @@ def test_job_execution(redis, registry):
 
     worker.perform_job(job)
     assert job.id not in (yield from registry.get_job_ids())
+
+
+def test_get_job_count(redis, registry, timestamp):
+    """StartedJobRegistry returns the right number of job count."""
+
+    timestamp = timestamp + 10
+    yield from redis.zadd(registry.key, timestamp, 'foo')
+    yield from redis.zadd(registry.key, timestamp, 'bar')
+    assert (yield from registry.count) == 2
+    with pytest.raises(RuntimeError):
+        len(registry)
