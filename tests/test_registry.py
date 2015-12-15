@@ -6,7 +6,12 @@ from rq import (Worker as SynchronousWorker,
 
 from aiorq.job import Job
 from aiorq.queue import Queue, FailedQueue
+from aiorq.registry import (clean_registries, FinishedJobRegistry,
+                            StartedJobRegistry)
 from fixtures import say_hello, div_by_zero
+
+
+# Started job registry.
 
 
 def test_add_and_remove(redis, registry, timestamp):
@@ -104,3 +109,22 @@ def test_get_job_count(redis, registry, timestamp):
     assert (yield from registry.count) == 2
     with pytest.raises(RuntimeError):
         len(registry)
+
+
+# Clean all registries.
+
+
+def test_clean_registries(redis):
+    """clean_registries() cleans Started and Finished job registries."""
+
+    queue = Queue(connection=redis)
+
+    finished_job_registry = FinishedJobRegistry(connection=redis)
+    yield from redis.zadd(finished_job_registry.key, 1, 'foo')
+
+    started_job_registry = StartedJobRegistry(connection=redis)
+    yield from redis.zadd(started_job_registry.key, 1, 'foo')
+
+    yield from clean_registries(queue)
+    assert not (yield from redis.zcard(finished_job_registry.key))
+    assert not (yield from redis.zcard(started_job_registry.key))

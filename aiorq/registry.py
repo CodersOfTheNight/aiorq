@@ -134,6 +134,30 @@ class StartedJobRegistry(BaseRegistry):
         return job_ids
 
 
+class FinishedJobRegistry(BaseRegistry):
+    """Registry of jobs that have been completed.
+
+    Jobs are added to this registry after they have successfully
+    completed for monitoring purposes.
+    """
+
+    def __init__(self, name='default', connection=None):
+        super().__init__(name, connection)
+        self.key = 'rq:finished:{0}'.format(name)
+
+    @asyncio.coroutine
+    def cleanup(self, timestamp=None):
+        """Remove expired jobs from registry.
+
+        Removes jobs with an expiry time earlier than timestamp,
+        specified as seconds since the Unix epoch. timestamp defaults
+        to call time if unspecified.
+        """
+
+        score = timestamp if timestamp else current_timestamp()
+        yield from self.connection.zremrangebyscore(self.key, 0, score)
+
+
 class DeferredJobRegistry(BaseRegistry):
     """Registry of deferred jobs (waiting for another job to finish)."""
 
@@ -149,3 +173,16 @@ class DeferredJobRegistry(BaseRegistry):
         """
 
         pass
+
+
+@asyncio.coroutine
+def clean_registries(queue):
+    """Cleans StartedJobRegistry and FinishedJobRegistry of a queue."""
+
+    name = queue.name
+    connection = queue.connection
+
+    registry = FinishedJobRegistry(name, connection)
+    yield from registry.cleanup()
+    registry = StartedJobRegistry(name, connection)
+    yield from registry.cleanup()
