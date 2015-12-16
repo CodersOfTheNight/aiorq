@@ -111,6 +111,25 @@ def test_get_job_count(redis, registry, timestamp):
         len(registry)
 
 
+# Finished job registry.
+
+
+def test_finished_cleanup(redis, timestamp):
+    """Finished job registry removes expired jobs."""
+
+    registry = FinishedJobRegistry()
+
+    yield from redis.zadd(registry.key, 1, 'foo')
+    yield from redis.zadd(registry.key, timestamp + 10, 'bar')
+    yield from redis.zadd(registry.key, timestamp + 30, 'baz')
+
+    yield from registry.cleanup()
+    assert (yield from registry.get_job_ids()) == ['bar', 'baz']
+
+    yield from registry.cleanup(timestamp + 20)
+    assert (yield from registry.get_job_ids()) == ['baz']
+
+
 # Clean all registries.
 
 
