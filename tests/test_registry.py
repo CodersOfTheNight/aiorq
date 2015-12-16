@@ -78,11 +78,12 @@ def test_cleanup(redis, registry):
 def test_job_execution(redis, registry):
     """Job is removed from StartedJobRegistry after execution."""
 
-    queue = Queue(connection=redis)
+    # We need synchronous jobs for synchronous workers
     with SynchronousConnection():
-        worker = SynchronousWorker(SynchronousQueue())
+        queue = SynchronousQueue()
+        worker = SynchronousWorker(queue)
 
-    job = yield from queue.enqueue(say_hello)
+    job = queue.enqueue(say_hello)
 
     worker.prepare_job_execution(job)
     assert job.id in (yield from registry.get_job_ids())
@@ -91,7 +92,7 @@ def test_job_execution(redis, registry):
     assert job.id not in (yield from registry.get_job_ids())
 
     # Job that fails
-    job = yield from queue.enqueue(div_by_zero)
+    job = queue.enqueue(div_by_zero)
 
     worker.prepare_job_execution(job)
     assert job.id in (yield from registry.get_job_ids())
