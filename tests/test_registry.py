@@ -130,6 +130,29 @@ def test_finished_cleanup(redis, timestamp):
     assert (yield from registry.get_job_ids()) == ['baz']
 
 
+def test_jobs_are_put_in_registry():
+    """Completed jobs are added to FinishedJobRegistry."""
+
+    registry = FinishedJobRegistry()
+
+    assert not (yield from registry.get_job_ids())
+
+    # We need synchronous jobs for synchronous workers
+    with SynchronousConnection():
+        queue = SynchronousQueue()
+        worker = SynchronousWorker(queue)
+
+    # Completed jobs are put in FinishedJobRegistry
+    job = queue.enqueue(say_hello)
+    worker.perform_job(job)
+    assert (yield from registry.get_job_ids()) == [job.id]
+
+    # Failed jobs are not put in FinishedJobRegistry
+    failed_job = queue.enqueue(div_by_zero)
+    worker.perform_job(failed_job)
+    assert (yield from registry.get_job_ids()) == [job.id]
+
+
 # Clean all registries.
 
 
