@@ -323,6 +323,7 @@ def test_job_access_outside_job_fails():
 def test_job_access_within_job_function():
     """The current job is accessible within the job function."""
 
+    # TODO: use asynchronous worker.  Job is not processed actually.
     q = Queue()
     # access_self calls get_current_job() and asserts
     yield from q.enqueue(access_self)
