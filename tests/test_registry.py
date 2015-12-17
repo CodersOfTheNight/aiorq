@@ -1,13 +1,14 @@
 import pytest
-from rq.job import JobStatus
 from rq import (Worker as SynchronousWorker,
                 Connection as SynchronousConnection,
                 Queue as SynchronousQueue)
+from rq.compat import as_text
+from rq.job import JobStatus
 
 from aiorq.job import Job
 from aiorq.queue import Queue, FailedQueue
 from aiorq.registry import (clean_registries, FinishedJobRegistry,
-                            StartedJobRegistry)
+                            StartedJobRegistry, DeferredJobRegistry)
 from fixtures import say_hello, div_by_zero
 
 
@@ -152,6 +153,21 @@ def test_jobs_are_put_in_registry():
     failed_job = queue.enqueue(div_by_zero)
     worker.perform_job(failed_job)
     assert (yield from registry.get_job_ids()) == [job.id]
+
+
+# Deferred job registries.
+
+
+def test_add(redis):
+    """Adding a job to DeferredJobsRegistry."""
+
+    registry = DeferredJobRegistry()
+    job = Job()
+
+    yield from registry.add(job)
+    job_ids = [as_text(job_id) for job_id in
+               (yield from redis.zrange(registry.key, 0, -1))]
+    assert job_ids == [job.id]
 
 
 # Clean all registries.
