@@ -67,6 +67,8 @@ def async_test(f):
                     'Redis connection stack. Check your setup.')
             finally:
                 yield from redis.flushdb()
+                redis.close()
+                yield from redis.wait_closed()
                 release_local(_connection_stack)
 
         assert not len(_connection_stack), \
