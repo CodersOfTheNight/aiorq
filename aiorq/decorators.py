@@ -26,6 +26,7 @@ def job(queue, connection=None, timeout=None, result_ttl=DEFAULT_RESULT_TTL):
         @wraps(f)
         def delay(*args, **kwargs):
 
+            nonlocal queue
             if isinstance(queue, string_types):
                 queue = Queue(name=queue, connection=connection)
             else:
