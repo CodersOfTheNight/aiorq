@@ -1,6 +1,7 @@
 import time
 
 from aiorq import get_current_job
+from aiorq.decorators import job
 
 
 def say_hello(name=None):
@@ -64,3 +65,8 @@ class UnicodeStringObject(object):
 def div_by_zero(x):
 
     return x / 0
+
+
+@job(queue='default')
+def decorated_job(x, y):
+    return x + y
