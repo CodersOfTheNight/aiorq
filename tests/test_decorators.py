@@ -1,4 +1,5 @@
 from aiorq.job import Job
+from aiorq.decorators import job
 from fixtures import decorated_job
 
 
@@ -18,3 +19,15 @@ def test_decorator_adds_delay_attr():
     assert isinstance(result, Job)
     # Ensure that job returns the right result when performed
     assert (yield from result.perform()) == 3
+
+
+def test_decorator_accepts_queue_name_as_argument():
+    """Ensure that passing in queue name to the decorator puts the job in
+    the right queue.
+    """
+
+    @job(queue='queue_name')
+    def hello():
+        return 'Hi'
+    result = yield from hello.delay()
+    assert result.origin == 'queue_name'
