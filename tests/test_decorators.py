@@ -1,5 +1,6 @@
 import pytest
 from rq.connections import NoRedisConnectionException
+from rq.defaults import DEFAULT_RESULT_TTL
 
 from aiorq import push_connection, pop_connection
 from aiorq.job import Job
@@ -36,6 +37,23 @@ def test_decorator_accepts_queue_name_as_argument():
 
     result = yield from hello.delay()
     assert result.origin == 'queue_name'
+
+
+def test_decorator_accepts_result_ttl_as_argument():
+    """Ensure that passing in result_ttl to the decorator sets the
+    result_ttl on the job.
+    """
+
+    # Ensure default
+    result = yield from decorated_job.delay(1, 2)
+    assert result.result_ttl == DEFAULT_RESULT_TTL
+
+    @job('default', result_ttl=10)
+    def hello():
+        return 'Why hello'
+
+    result = yield from hello.delay()
+    assert result.result_ttl == 10
 
 
 def test_decorator_accepts_result_depends_on_as_argument():
