@@ -29,5 +29,29 @@ def test_decorator_accepts_queue_name_as_argument():
     @job(queue='queue_name')
     def hello():
         return 'Hi'
+
     result = yield from hello.delay()
     assert result.origin == 'queue_name'
+
+
+def test_decorator_accepts_result_depends_on_as_argument():
+    """Ensure that passing in depends_on to the decorator sets the correct
+    dependency on the job.
+    """
+
+    @job(queue='queue_name')
+    def foo():
+        return 'Firstly'
+
+    @job(queue='queue_name')
+    def bar():
+        return 'Secondly'
+
+    foo_job = yield from foo.delay()
+    bar_job = yield from bar.delay(depends_on=foo_job)
+
+    assert not foo_job._dependency_id
+
+    assert (yield from bar_job.dependency) == foo_job
+
+    assert bar_job._dependency_id == foo_job.id
