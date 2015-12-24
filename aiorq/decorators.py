@@ -29,12 +29,21 @@ def job(queue, connection=None, timeout=None, result_ttl=DEFAULT_RESULT_TTL):
         def delay(*args, **kwargs):
 
             nonlocal queue
+            # NOTE: Do not assign newly created instance into variable
+            # named "queue".  This assignment will alter <locals>
+            # scope enclosing wrapper function.  Created instance will
+            # be shared between all calls for delay method.  This may
+            # lead into inconsistent queue state triggered by
+            # concurrent or semi-performed operations on decorated
+            # functions.  On the other hand if Queue instance was
+            # passed directly to the job decorator it is user
+            # responsibility to handle queue access in the proper way.
             if isinstance(queue, string_types):
-                queue = Queue(name=queue, connection=connection)
+                _queue = Queue(name=queue, connection=connection)
             else:
-                queue = queue
+                _queue = queue
             depends_on = kwargs.pop('depends_on', None)
-            coroutine = queue.enqueue_call(
+            coroutine = _queue.enqueue_call(
                 f, args=args, kwargs=kwargs, timeout=timeout,
                 result_ttl=result_ttl, depends_on=depends_on)
             return (yield from coroutine)
