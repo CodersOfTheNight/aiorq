@@ -17,7 +17,7 @@ def job(queue, connection=None, timeout=None, result_ttl=DEFAULT_RESULT_TTL):
         def simple_add(x, y):
             return x + y
 
-        simple_add.delay(1, 2) # Puts simple_add function into queue
+        yield from simple_add.delay(1, 2) # Puts simple_add function into queue
 
     """
 
