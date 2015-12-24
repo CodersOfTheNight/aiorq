@@ -1,3 +1,7 @@
+import pytest
+from rq.connections import NoRedisConnectionException
+
+from aiorq import push_connection, pop_connection
 from aiorq.job import Job
 from aiorq.decorators import job
 from fixtures import decorated_job
@@ -55,3 +59,26 @@ def test_decorator_accepts_result_depends_on_as_argument():
     assert (yield from bar_job.dependency) == foo_job
 
     assert bar_job._dependency_id == foo_job.id
+
+
+def test_decorator_connection_laziness():
+    """Ensure that job decorator resolve connection in `lazy` way."""
+
+    redis = pop_connection()
+
+    @job(queue='queue_name')
+    def foo():
+        return 'do something'
+
+    foo()  # Direct call doesn't call resolve_connection
+
+    # Delaying job will call resolve_connection which will trigger
+    # assertion error since connection stack is empty.
+    with pytest.raises(NoRedisConnectionException):
+        yield from foo.delay()
+
+    push_connection(redis)
+
+    # And finally we don't fail delaying job with active connection on
+    # stack.
+    yield from foo.delay()
