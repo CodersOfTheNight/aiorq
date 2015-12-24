@@ -1,3 +1,4 @@
+import asyncio
 from functools import wraps
 
 from rq.compat import string_types
@@ -24,6 +25,7 @@ def job(queue, connection=None, timeout=None, result_ttl=DEFAULT_RESULT_TTL):
     def wrapper(f):
 
         @wraps(f)
+        @asyncio.coroutine
         def delay(*args, **kwargs):
 
             nonlocal queue
@@ -32,9 +34,10 @@ def job(queue, connection=None, timeout=None, result_ttl=DEFAULT_RESULT_TTL):
             else:
                 queue = queue
             depends_on = kwargs.pop('depends_on', None)
-            return queue.enqueue_call(
+            coroutine = queue.enqueue_call(
                 f, args=args, kwargs=kwargs, timeout=timeout,
                 result_ttl=result_ttl, depends_on=depends_on)
+            return (yield from coroutine)
 
         f.delay = delay
         return f
