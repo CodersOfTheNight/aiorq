@@ -28,14 +28,6 @@ def job(queue, connection=None, timeout=None, result_ttl=DEFAULT_RESULT_TTL):
         @asyncio.coroutine
         def delay(*args, **kwargs):
 
-            nonlocal queue
-            # NOTE: Do not assign newly created instance into variable
-            # named "queue".  This assignment will alter <locals>
-            # scope enclosing wrapper function.  Created instance will
-            # be shared between all calls for delay method.  This may
-            # lead into inconsistent queue state triggered by
-            # accidentally resolved connection which was already
-            # closed.
             if isinstance(queue, string_types):
                 _queue = Queue(name=queue, connection=connection)
             else:
