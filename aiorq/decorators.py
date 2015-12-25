@@ -1,3 +1,13 @@
+"""
+    aiorq.decorators
+    ~~~~~~~~~~~~~~~~
+
+    This module contains Celery-like job decorator.
+
+    :copyright: (c) 2015 by Artem Malyshev.
+    :license: LGPL-3, see LICENSE for more details.
+"""
+
 import asyncio
 from functools import wraps
 
