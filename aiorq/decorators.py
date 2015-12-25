@@ -34,10 +34,8 @@ def job(queue, connection=None, timeout=None, result_ttl=DEFAULT_RESULT_TTL):
             # scope enclosing wrapper function.  Created instance will
             # be shared between all calls for delay method.  This may
             # lead into inconsistent queue state triggered by
-            # concurrent or semi-performed operations on decorated
-            # functions.  On the other hand if Queue instance was
-            # passed directly to the job decorator it is user
-            # responsibility to handle queue access in the proper way.
+            # accidentally resolved connection which was already
+            # closed.
             if isinstance(queue, string_types):
                 _queue = Queue(name=queue, connection=connection)
             else:
