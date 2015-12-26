@@ -8,7 +8,7 @@ from rq import (Worker as SynchronousWorker,
 from rq.compat import as_text
 from rq.utils import utcformat
 
-from aiorq import get_current_job, Queue
+from aiorq import cancel_job, get_current_job, Queue
 from aiorq.job import Job, loads, dumps
 from aiorq.exceptions import NoSuchJobError, UnpickleError
 from aiorq.registry import DeferredJobRegistry
@@ -477,3 +477,15 @@ def test_create_job_with_ttl_should_expire(redis):
     queue.enqueue(say_hello, job_id="1234", ttl=1)
     time.sleep(1)
     assert not len((yield from queue.get_jobs()))
+
+
+def test_cancel_job(redis):
+    """Canceling job removes it from queue."""
+
+    queue = Queue(connection=redis)
+    yield from queue.enqueue(say_hello)
+    job_id = (yield from queue.get_job_ids())[0]
+
+    yield from cancel_job(job_id, connection=redis)
+
+    assert (yield from queue.is_empty())

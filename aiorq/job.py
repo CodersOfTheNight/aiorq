@@ -21,9 +21,23 @@ from .exceptions import NoSuchJobError
 
 
 @asyncio.coroutine
+def cancel_job(job_id, connection=None):
+    """Cancels the job with the given job ID, preventing execution.
+
+    Discards any job info (i.e. it can't be requeued later).
+    """
+
+    job = Job(job_id, connection=connection)
+    yield from job.refresh()
+    yield from job.cancel()
+
+
+@asyncio.coroutine
 def get_current_job(connection=None):
-    """Returns the Job instance that is currently being executed.  If this
-    function is invoked from outside a job context, None is returned.
+    """Returns the Job instance that is currently being executed.
+
+    If this function is invoked from outside a job context, None is
+    returned.
     """
 
     job_id = _job_stack.top
