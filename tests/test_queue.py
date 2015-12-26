@@ -537,7 +537,7 @@ def test_requeue_sets_status_to_queued():
 
 
 def test_skip_queue():
-    """Ensure the skip_queue option functions"""
+    """Ensure the skip_queue option functions."""
 
     q = Queue('foo')
     job1 = yield from q.enqueue(say_hello)
