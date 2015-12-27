@@ -7,6 +7,8 @@
     :copyright: (c) 2015 by Artem Malyshev.
     :license: LGPL-3, see LICENSE for more details.
 """
+# This code was adapted from aiorq module written by Vincent Driessen
+# and released under 2-clause BSD license.
 
 from .connections import (Connection, pop_connection, push_connection,
                           get_current_connection, use_connection)

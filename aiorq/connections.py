@@ -7,6 +7,8 @@
     :copyright: (c) 2015 by Artem Malyshev.
     :license: LGPL-3, see LICENSE for more details.
 """
+# This code was adapted from rq.connections module written by Vincent
+# Driessen and released under 2-clause BSD license.
 
 import asyncio
 from contextlib import contextmanager
