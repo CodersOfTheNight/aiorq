@@ -33,6 +33,20 @@ def cancel_job(job_id, connection=None):
 
 
 @asyncio.coroutine
+def requeue_job(job_id, connection=None):
+    """Requeues the job with the given job ID.
+
+    The job ID should be refer to a failed job (i.e. it should be on
+    the failed queue).  If no such (failed) job exists, a
+    NoSuchJobError is raised.
+    """
+
+    from .queue import get_failed_queue
+    fq = get_failed_queue(connection=connection)
+    yield from fq.requeue(job_id)
+
+
+@asyncio.coroutine
 def get_current_job(connection=None):
     """Returns the Job instance that is currently being executed.
 

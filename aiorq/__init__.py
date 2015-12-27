@@ -10,7 +10,7 @@
 
 from .connections import (Connection, pop_connection, push_connection,
                           get_current_connection, use_connection)
-from .job import cancel_job, get_current_job
+from .job import cancel_job, get_current_job, requeue_job
 from .queue import get_failed_queue, Queue
 
 

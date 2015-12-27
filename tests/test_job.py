@@ -8,13 +8,14 @@ from rq import (Worker as SynchronousWorker,
 from rq.compat import as_text
 from rq.utils import utcformat
 
-from aiorq import cancel_job, get_current_job, Queue
+from aiorq import (cancel_job, get_current_job, requeue_job, Queue,
+                   get_failed_queue)
 from aiorq.job import Job, loads, dumps
 from aiorq.exceptions import NoSuchJobError, UnpickleError
 from aiorq.registry import DeferredJobRegistry
 from fixtures import (Number, some_calculation, say_hello,
                       CallableObject, access_self, long_running_job,
-                      echo, UnicodeStringObject)
+                      echo, UnicodeStringObject, div_by_zero)
 from helpers import strip_microseconds
 
 
@@ -489,3 +490,19 @@ def test_cancel_job(redis):
     yield from cancel_job(job_id, connection=redis)
 
     assert (yield from queue.is_empty())
+
+
+def test_requeue_job(redis):
+    """Requeueing failed job."""
+
+    job = Job.create(func=div_by_zero, args=(1, 2, 3))
+    job.origin = 'default'
+    yield from job.save()
+    yield from get_failed_queue().quarantine(job, Exception('Some fake error'))
+
+    assert (yield from Queue.all()) == [get_failed_queue()]
+
+    yield from requeue_job(job.id)
+
+    assert not (yield from Queue('default').is_empty())
+    assert (yield from get_failed_queue().is_empty())
