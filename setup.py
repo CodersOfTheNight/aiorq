@@ -12,7 +12,7 @@ setup(
     author='Artem Malyshev',
     author_email='proofit404@gmail.com',
     packages=find_packages(),
-    install_requires=['rq', 'aioredis'],
+    install_requires=['rq>=0.5', 'aioredis>=0.2'],
     classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
