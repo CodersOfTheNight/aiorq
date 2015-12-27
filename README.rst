@@ -19,11 +19,20 @@
     :target: https://pypi.python.org/pypi/aiorq/
     :alt: Python Package Version
 
-
 =====
 aiorq
 =====
 
 |travis| |coveralls| |requires| |codacy| |pypi|
 
-asyncio client and server for RQ.
+asyncio_ client and server for RQ_.
+
+- `Source Code`_
+- `Issue Tracker`_
+- Documentation_
+
+.. _asyncio: https://docs.python.org/3/library/asyncio.html
+.. _rq: http://python-rq.org
+.. _source code: https://github.com/proofit404/aiorq
+.. _issue tracker: https://github.com/proofit404/aiorq/issues
+.. _documentation: http://aiorq.readthedocs.org/
