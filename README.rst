@@ -31,6 +31,66 @@ asyncio_ client and server for RQ_.
 - `Issue Tracker`_
 - Documentation_
 
+Features
+--------
+
+- Event loop friendly
+- Non-blocking job enqueueing and result obtaining
+
+Installation
+------------
+
+You can always install last released version from python package
+index.
+
+.. code:: bash
+
+    pip install aiorq
+
+Getting started
+---------------
+
+Suppose we have a module with slow blocking function like this one.
+
+.. code:: python
+
+    import requests
+
+    def get_json(url):
+        response = requests.get(url)
+        return response.json()
+
+To schedule deferred jobs create queue and enqueue the function call
+within event loop.
+
+.. code:: python
+
+    import asyncio
+
+    from aioredis import create_redis
+    from aiorq import Queue, use_connection
+
+    from my_module import get_json
+
+    loop = asyncio.get_event_loop()
+
+    @asyncio.coroutine
+    def main():
+        redis = yield from create_redis(('localhost', 6379), loop=loop)
+        use_connection(redis)
+        queue = Queue()
+        job = yield from queue.enqueue(get_json, 'https://www.python.org')
+        print((yield from job.result))
+        redis.close()
+        yield from redis.wait_closed()
+
+    loop.run_until_complete(main())
+
+License
+-------
+
+The aiorq is offered under LGPL license.
+
 .. _asyncio: https://docs.python.org/3/library/asyncio.html
 .. _rq: http://python-rq.org
 .. _source code: https://github.com/proofit404/aiorq
