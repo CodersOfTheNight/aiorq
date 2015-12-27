@@ -15,10 +15,15 @@
     :target: https://www.codacy.com/app/proofit404/aiorq
     :alt: Code Quality Status
 
+.. |pypi| image:: https://img.shields.io/pypi/v/aiorq.svg?style=flat-square
+    :target: https://pypi.python.org/pypi/aiorq/
+    :alt: Python Package Version
+
+
 =====
 aiorq
 =====
 
-|travis| |coveralls| |requires| |codacy|
+|travis| |coveralls| |requires| |codacy| |pypi|
 
 asyncio client and server for RQ.
