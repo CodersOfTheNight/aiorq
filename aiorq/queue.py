@@ -65,12 +65,14 @@ class Queue:
         name = queue_key[len(prefix):]
         return cls(name, connection=connection)
 
-    def __init__(self, name='default', connection=None, job_class=None):
+    def __init__(self, name='default', default_timeout=None, connection=None,
+                 job_class=None):
 
         self.connection = resolve_connection(connection)
         prefix = self.redis_queue_namespace_prefix
         self.name = name
         self._key = '{0}{1}'.format(prefix, name)
+        self._default_timeout = default_timeout
 
         if job_class is not None:
             if isinstance(job_class, str):
@@ -263,6 +265,8 @@ class Queue:
         and kwargs as explicit arguments.  Any kwargs passed to this function
         contain options for RQ itself.
         """
+
+        timeout = timeout or self._default_timeout
 
         job = self.job_class.create(
             func, args=args, kwargs=kwargs, timeout=timeout,

@@ -467,6 +467,15 @@ def test_enqueue_job_with_dependency_and_timeout():
     assert job.timeout == 123
 
 
+def test_enqueue_job_with_queue_default_timeout():
+    """Default timeout specified in queue constructor will be applied to job.
+    """
+
+    q = Queue('foo', default_timeout=9999)
+    job = yield from q.enqueue(say_hello)
+    assert job.timeout == 9999
+
+
 # Failed queue tests.
 
 
