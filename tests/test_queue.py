@@ -47,6 +47,16 @@ def test_equality():
     assert q2 != q3
 
 
+def test_queue_order():
+    """Mathematical order of queues."""
+
+    q1 = Queue('a')
+    q2 = Queue('b')
+    q3 = Queue('c')
+    assert q1 < q2
+    assert q3 > q2
+
+
 def test_empty_queue(redis):
     """Emptying queues."""
 

@@ -11,6 +11,7 @@
 # Driessen and released under 2-clause BSD license.
 
 import asyncio
+import functools
 import uuid
 
 from aioredis import MultiExecError
@@ -30,6 +31,7 @@ def get_failed_queue(connection=None):
     return FailedQueue(connection=connection)
 
 
+@functools.total_ordering
 class Queue:
     """asyncio job queue."""
 
@@ -462,6 +464,10 @@ class Queue:
     def __eq__(self, other):
 
         return self.name == other.name
+
+    def __lt__(self, other):
+
+        return self.name < other.name
 
 
 class FailedQueue(Queue):
