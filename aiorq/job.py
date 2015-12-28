@@ -341,5 +341,21 @@ class Job(SynchronousJob):
             yield from queue.remove(self, pipeline=pipeline)
             yield from pipeline.execute()
 
+    # Break backward compatibility with earlier rq versions.
+
+    @property
+    def return_value(self):
+
+        raise RuntimeError(
+            'This attribute does not available in the aiorq Job '
+            '(use result instead)')
+
+    @property
+    def status(self):
+
+        raise RuntimeError(
+            'This attribute does not available in the aiorq Job '
+            '(use get_status/set_status instead)')
+
 
 _job_stack = LocalStack()

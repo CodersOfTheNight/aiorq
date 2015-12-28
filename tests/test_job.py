@@ -521,3 +521,16 @@ def test_job_status_():
     assert (yield from job.is_failed)
     yield from job.set_status(JobStatus.STARTED)
     assert (yield from job.is_started)
+
+
+def test_backward_compatibility_properties_are_broken():
+    """`result_value` is backward compatibility property of synchronous
+    `Job` class.  It point to the blocking call and I don't want it
+    appears in asynchronous `Job` implementation.  The same is
+    relevant for `status` property.
+    """
+
+    with pytest.raises(RuntimeError):
+        Job().return_value
+    with pytest.raises(RuntimeError):
+        Job().status
