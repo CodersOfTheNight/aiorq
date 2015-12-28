@@ -13,7 +13,8 @@
 import asyncio
 
 from rq.compat import as_text, decode_redis_hash
-from rq.job import Job as SynchronousJob, UNEVALUATED, loads, unpickle
+from rq.job import (Job as SynchronousJob, UNEVALUATED, loads,
+                    unpickle, JobStatus)
 from rq.job import dumps        # noqa
 from rq.local import LocalStack
 from rq.utils import utcnow, utcparse
@@ -82,6 +83,30 @@ class Job(SynchronousJob):
         coroutine = connection.hset(self.key, 'status', self._status)
         if not pipeline:
             yield from coroutine
+
+    @property
+    @asyncio.coroutine
+    def is_finished(self):
+
+        return (yield from self.get_status()) == JobStatus.FINISHED
+
+    @property
+    @asyncio.coroutine
+    def is_queued(self):
+
+        return (yield from self.get_status()) == JobStatus.QUEUED
+
+    @property
+    @asyncio.coroutine
+    def is_failed(self):
+
+        return (yield from self.get_status()) == JobStatus.FAILED
+
+    @property
+    @asyncio.coroutine
+    def is_started(self):
+
+        return (yield from self.get_status()) == JobStatus.STARTED
 
     @classmethod
     @asyncio.coroutine

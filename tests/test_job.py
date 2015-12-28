@@ -6,6 +6,7 @@ from rq import (Worker as SynchronousWorker,
                 Connection as SynchronousConnection,
                 Queue as SynchronousQueue)
 from rq.compat import as_text
+from rq.job import JobStatus
 from rq.utils import utcformat
 
 from aiorq import (cancel_job, get_current_job, requeue_job, Queue,
@@ -506,3 +507,17 @@ def test_requeue_job(redis):
 
     assert not (yield from Queue('default').is_empty())
     assert (yield from get_failed_queue().is_empty())
+
+
+def test_job_status_():
+    """Access job status checkers like is_started."""
+
+    job = Job()
+    yield from job.set_status(JobStatus.FINISHED)
+    assert (yield from job.is_finished)
+    yield from job.set_status(JobStatus.QUEUED)
+    assert (yield from job.is_queued)
+    yield from job.set_status(JobStatus.FAILED)
+    assert (yield from job.is_failed)
+    yield from job.set_status(JobStatus.STARTED)
+    assert (yield from job.is_started)
