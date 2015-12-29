@@ -25,6 +25,15 @@ def test_create_named_queue():
     assert q.name == 'my-queue'
 
 
+def test_queue_magic_methods():
+    """Test simple magic method behavior of the Queue class."""
+
+    q = Queue()
+    assert hash(q) == hash('default')
+    assert str(q) == "<Queue 'default'>"
+    assert repr(q) == "Queue('default')"
+
+
 def test_custom_job_class():
     """Ensure custom job class assignment works as expected."""
 

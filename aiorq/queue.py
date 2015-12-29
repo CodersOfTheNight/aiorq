@@ -471,6 +471,15 @@ class Queue:
 
         return self.name < other.name
 
+    def __hash__(self):
+        return hash(self.name)
+
+    def __repr__(self):
+        return 'Queue({!r})'.format(self.name)
+
+    def __str__(self):
+        return '<Queue {!r}>'.format(self.name)
+
 
 class FailedQueue(Queue):
     """Special queue for failed asynchronous jobs."""
