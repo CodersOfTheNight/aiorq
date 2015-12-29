@@ -486,6 +486,14 @@ def test_enqueue_job_with_queue_default_timeout():
     assert job.timeout == 9999
 
 
+def test_enqueue_call_custom_description():
+    """Custom description passed into enqueue_call will be saved in returned job."""
+
+    q = Queue()
+    job = yield from q.enqueue_call(say_hello, description='...')
+    assert job.description == '...'
+
+
 # Failed queue tests.
 
 
