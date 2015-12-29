@@ -259,7 +259,7 @@ class Queue:
     @asyncio.coroutine
     def enqueue_call(self, func, args=None, kwargs=None, timeout=None,
                      result_ttl=None, ttl=None, description=None,
-                     depends_on=None, job_id=None, at_front=False):
+                     depends_on=None, job_id=None, at_front=False, meta=None):
         """Creates a job to represent the delayed function call and enqueues
         it.
 
@@ -274,7 +274,7 @@ class Queue:
             func, args=args, kwargs=kwargs, timeout=timeout,
             connection=self.connection, result_ttl=result_ttl, ttl=ttl,
             description=description, id=job_id, depends_on=depends_on,
-            origin=self.name)
+            origin=self.name)  # TODO: pass meta argument after rq 0.5.7
 
         # If job depends on an unfinished job, register itself on it's
         # parent's dependents instead of enqueueing it.  If
