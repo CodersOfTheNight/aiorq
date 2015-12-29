@@ -311,6 +311,14 @@ def test_enqueue_sets_status():
     assert (yield from job.get_status()) == JobStatus.QUEUED
 
 
+def test_enqueue_call_sets_status():
+    """Enqueueing call sets jobs state to 'queued'."""
+
+    q = Queue()
+    job = yield from q.enqueue_call(say_hello)
+    assert (yield from job.is_queued)
+
+
 def test_enqueue_explicit_args():
     """enqueue() works for both implicit/explicit args."""
 

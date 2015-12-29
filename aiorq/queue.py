@@ -270,11 +270,12 @@ class Queue:
 
         timeout = timeout or self._default_timeout
 
+        # TODO: pass meta argument after rq 0.5.7 release
         job = self.job_class.create(
             func, args=args, kwargs=kwargs, timeout=timeout,
             connection=self.connection, result_ttl=result_ttl, ttl=ttl,
-            description=description, id=job_id, depends_on=depends_on,
-            origin=self.name)  # TODO: pass meta argument after rq 0.5.7
+            status=JobStatus.QUEUED, description=description, id=job_id,
+            depends_on=depends_on, origin=self.name)
 
         # If job depends on an unfinished job, register itself on it's
         # parent's dependents instead of enqueueing it.  If
