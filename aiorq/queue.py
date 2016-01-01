@@ -314,7 +314,7 @@ class Queue:
     def enqueue_job(self, job, pipeline=None, at_front=False):
         """Enqueues a job for delayed execution."""
 
-        pipe = pipeline if pipeline else self.connection.pipeline()
+        pipe = pipeline if pipeline else self.connection.multi_exec()
         pipe.sadd(self.redis_queues_keys, self.key)
         yield from job.set_status(JobStatus.QUEUED, pipeline=pipe)
 
@@ -348,7 +348,7 @@ class Queue:
                 job_id, connection=self.connection)
             registry = DeferredJobRegistry(dependent.origin, self.connection)
 
-            pipe = self.connection.pipeline()
+            pipe = self.connection.multi_exec()
             yield from registry.remove(dependent, pipeline=pipe)
             if dependent.origin == self.name:
                 yield from self.enqueue_job(dependent, pipeline=pipe)
@@ -504,7 +504,7 @@ class FailedQueue(Queue):
         # client make internal cast all non string values to the
         # string.  So we need to do it explicitly.
         job.exc_info = str(exc_info)
-        pipe = self.connection.pipeline()  # TODO: use multi_exec here?
+        pipe = self.connection.multi_exec()
         yield from job.save(pipeline=pipe)
 
         yield from self.push_job_id(job.id, pipeline=pipe)

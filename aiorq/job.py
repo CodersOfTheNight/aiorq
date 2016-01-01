@@ -336,7 +336,7 @@ class Job(SynchronousJob):
 
         if self.origin:
             from .queue import Queue
-            pipeline = self.connection.pipeline()
+            pipeline = self.connection.multi_exec()
             queue = Queue(name=self.origin, connection=self.connection)
             yield from queue.remove(self, pipeline=pipeline)
             yield from pipeline.execute()
