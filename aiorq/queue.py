@@ -380,12 +380,12 @@ class Queue:
         """
 
         connection = resolve_connection(connection)
-        if timeout is not None:  # TODO: test me
+        if timeout is not None:
             if timeout == 0:
                 raise ValueError(
-                    'RQ does not support indefinite timeouts. '
+                    'aiorq does not support indefinite timeouts.  '
                     'Please pick a timeout value > 0')
-            result = yield from connection.blpop(queue_keys, timeout)
+            result = yield from connection.blpop(*queue_keys, timeout=timeout)
             if result is None:
                 raise DequeueTimeout(timeout, queue_keys)
             queue_key, job_id = result

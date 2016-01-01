@@ -5,7 +5,7 @@ from rq import (Worker as SynchronousWorker,
 from rq.job import JobStatus
 
 from aiorq import Queue, get_failed_queue
-from aiorq.exceptions import InvalidJobOperationError
+from aiorq.exceptions import InvalidJobOperationError, DequeueTimeout
 from aiorq.job import Job
 from aiorq.registry import DeferredJobRegistry
 from fixtures import say_hello, Number, echo, div_by_zero
@@ -310,6 +310,18 @@ def test_dequeue_any_ignores_nonexisting_jobs():
     assert (yield from q.count) == 1
     assert not (yield from Queue.dequeue_any([Queue(), Queue('low')], None))
     assert not (yield from q.count)
+
+
+def test_dequeue_any_with_timeout():
+    """Dequeue any behavior with timeout."""
+
+    queue = Queue()
+    with pytest.raises(ValueError):
+        yield from Queue.dequeue_any([queue], 0)
+    with pytest.raises(DequeueTimeout):
+        yield from Queue.dequeue_any([queue], 1)
+    job = yield from queue.enqueue(say_hello)
+    assert (yield from Queue.dequeue_any([queue], 1)) == (job, queue)
 
 
 def test_enqueue_sets_status():
