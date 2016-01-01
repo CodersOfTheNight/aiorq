@@ -303,6 +303,8 @@ class Queue:
                     break
                 except MultiExecError:
                     continue
+                finally:
+                    self.connection.unwatch()
 
         job = yield from self.enqueue_job(job, at_front=at_front)
 
