@@ -2,35 +2,12 @@ import asyncio
 import functools
 import gc
 
-from aioredis import create_redis, RedisConnection
+from aioredis import create_redis
 from rq.local import release_local
 
 from aiorq import pop_connection, push_connection
 from aiorq.connections import _connection_stack
 from aiorq.registry import StartedJobRegistry
-
-
-def logger(f):
-
-    @functools.wraps(f)
-    def wrapper(self, *args, **kwargs):
-
-        logger_args = []
-        for arg in args:
-            if hasattr(arg, 'decode'):
-                try:
-                    arg = arg.decode()
-                except UnicodeDecodeError:
-                    pass
-            logger_args.append(arg)
-        print('>>>', *logger_args)
-        return f(self, *args, **kwargs)
-
-    return wrapper
-
-
-# Don't Try This at Home...
-RedisConnection.execute = logger(RedisConnection.execute)
 
 
 @asyncio.coroutine
