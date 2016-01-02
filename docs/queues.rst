@@ -4,7 +4,7 @@ Queues
 I make assumption that you are already familiar with RQ library.
 Queues, jobs and workers preserve its original meanings.  This library
 tries to repeat all public API of original package and guarantee
-compatibility with its last release.
+binary compatibility with its latest release.
 
 Enqueueing jobs
 ---------------
@@ -15,6 +15,8 @@ this task so Queue's creation is possible only inside running
 coroutines.  Then simply put job into queue.
 
 .. literalinclude:: ../examples/enqueueing.py
+    :language: python
+    :lines: 9-18
 
 Start old good rq worker with familiar command.
 
