@@ -60,3 +60,13 @@ do that is synchronous worker provided by RQ package.  Call to
 ``aiorq.Job`` methods require running event loop and can't be done
 easily without asynchronous workers and enqueued coroutines.  We will
 discus this topic later.
+
+Bypassing workers
+-----------------
+
+Synchronous queues are not supported.  You can't pass ``async=False``
+to ``Queue`` constructor as you do with original package.  If you need
+this for testing purposes, that's simple: separate business logic from
+any task queue as much as possible and test it independently.  That's
+it!  Or use ``unittest.mock.patch`` if you don't share my point of
+view in system design.
