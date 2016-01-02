@@ -3,7 +3,7 @@ Queues
 
 I make assumption that you are already familiar with RQ library.
 Queues, jobs and workers preserve its original meanings.  This library
-tries to repeat all public API of original package and granite
+tries to repeat all public API of original package and guarantee
 compatibility with its last release.
 
 Enqueueing jobs
