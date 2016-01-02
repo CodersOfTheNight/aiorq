@@ -26,3 +26,16 @@ Start old good rq worker with familiar command.
 
 Remember ``mylib`` must be importable to worker, i.e. add ``examples``
 directory into python path.
+
+The ``@job`` decorator
+----------------------
+
+You can also use Celery-style decorated tasks.
+
+.. literalinclude:: ../examples/mylib.py
+    :language: python
+    :lines: 9-12
+
+.. literalinclude:: ../examples/job_decorator.py
+    :language: python
+    :lines: 9-18
