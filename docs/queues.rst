@@ -39,3 +39,24 @@ You can also use Celery-style decorated tasks.
 .. literalinclude:: ../examples/job_decorator.py
     :language: python
     :lines: 9-18
+
+Job dependencies
+----------------
+
+To execute a job that depends on another job, use the ``depends_on``
+argument.
+
+.. literalinclude:: ../examples/mylib.py
+    :language: python
+    :lines: 2-4,17-23
+
+.. literalinclude:: ../examples/dependencies.py
+    :language: python
+    :lines: 12-16
+    :dedent: 4
+
+In the example above we use ``rq.Job`` to fetch result.  The reason we
+do that is synchronous worker provided by RQ package.  Call to
+``aiorq.Job`` methods require running event loop and can't be done
+easily without asynchronous workers and enqueued coroutines.  We will
+discus this topic later.
