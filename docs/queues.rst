@@ -34,7 +34,7 @@ You can also use Celery-style decorated tasks.
 
 .. literalinclude:: ../examples/mylib.py
     :language: python
-    :lines: 9-12
+    :lines: 10-13
 
 .. literalinclude:: ../examples/job_decorator.py
     :language: python
@@ -48,7 +48,7 @@ argument.
 
 .. literalinclude:: ../examples/mylib.py
     :language: python
-    :lines: 2-4,17-23
+    :lines: 2-3,16-22
 
 .. literalinclude:: ../examples/dependencies.py
     :language: python

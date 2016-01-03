@@ -1,6 +1,5 @@
 from aiorq.decorators import job
-from rq import Connection
-from rq.job import Job
+from rq import Connection, Queue
 
 
 def add(*args):
@@ -17,7 +16,7 @@ def summator(*args):
 def job_summator(id1, id2):
 
     with Connection():
-        job1 = Job.fetch(id1)
-        job2 = Job.fetch(id2)
+        job1 = Queue().fetch_job(id1)
+        job2 = Queue().fetch_job(id2)
 
     return add(job1.result, job2.result)
