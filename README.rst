@@ -68,7 +68,7 @@ within event loop.
     import asyncio
 
     from aioredis import create_redis
-    from aiorq import Queue, use_connection
+    from aiorq import Queue
 
     from my_module import get_json
 
@@ -77,8 +77,7 @@ within event loop.
     @asyncio.coroutine
     def main():
         redis = yield from create_redis(('localhost', 6379), loop=loop)
-        use_connection(redis)
-        queue = Queue()
+        queue = Queue(connection=redis)
         job = yield from queue.enqueue(get_json, 'https://www.python.org')
         print((yield from job.result))
         redis.close()
