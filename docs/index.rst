@@ -17,6 +17,7 @@ Contents
 
     queues
     jobs
+    connections
 
 Indices and tables
 ==================
