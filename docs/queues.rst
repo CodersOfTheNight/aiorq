@@ -61,6 +61,29 @@ do that is synchronous worker provided by RQ package.  Call to
 easily without asynchronous workers and enqueued coroutines.  We will
 discus this topic later.
 
+Working with Queues
+-------------------
+
+Queues have a few useful methods you can use to get some interesting
+information.
+
+.. code:: python
+
+    redis = yield from create_redis(('localhost', 6379))
+    q = Queue(connection=redis)
+
+    # Getting the number of jobs in the queue
+    yield from q.count
+
+    # Get a list of job IDs from the queue
+    yield from q.job_ids
+
+    # Get a list of enqueued job instances
+    yield from q.jobs
+
+    # Returns job having ID "my_id"
+    yield from q.fetch_job('my_id')
+
 Bypassing workers
 -----------------
 
