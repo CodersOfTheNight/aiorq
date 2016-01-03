@@ -16,6 +16,7 @@ Contents
     :maxdepth: 2
 
     queues
+    jobs
 
 Indices and tables
 ==================
