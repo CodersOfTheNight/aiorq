@@ -4,7 +4,7 @@ readme = open('README.rst').read() + open('CHANGELOG.rst').read()
 
 setup(
     name='aiorq',
-    version='0.1.dev1',
+    version='0.1',
     description='asyncio client and server for RQ',
     long_description=readme,
     url='https://github.com/proofit404/aiorq',
