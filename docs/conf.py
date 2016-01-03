@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
 
-import sys
-import os
-import shlex
-
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.doctest',
