@@ -21,8 +21,8 @@ project = 'aiorq'
 copyright = '2015, Artem Malyshev'
 author = 'Artem Malyshev'
 
-version = '0.1'
-release = '0.1'
+version = '0.2'
+release = '0.2'
 
 language = None
 
