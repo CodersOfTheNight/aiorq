@@ -10,32 +10,15 @@
 # This code was adapted from rq.connections module written by Vincent
 # Driessen and released under 2-clause BSD license.
 
-import asyncio
 from contextlib import contextmanager
 
-from aioredis import create_redis
 from rq.connections import NoRedisConnectionException
-from rq.local import LocalStack, release_local
-
-
-class Connection:
-    """All queues created in the inner block will use this connection."""
-
-    def __init__(self, connection=None, **kwargs):
-
-        self.connection = connection
-        self.kwargs = kwargs
-
-    def __iter__(self):
-
-        # Make yield from Connection() works.
-        if self.connection is None:
-            self.connection = yield from create_redis(**self.kwargs)
-        return _ConnectionContextManager(self.connection)
+from rq.local import LocalStack
 
 
 @contextmanager
-def _ConnectionContextManager(connection):
+def Connection(connection):
+    """All queues created in the inner block will use this connection."""
 
     push_connection(connection)
     try:

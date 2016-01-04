@@ -36,7 +36,7 @@ Or you can use stacked connection context.
 
     from aiorq import Queue, Connection
 
-    with (yield from Connection(address=('localhost', 6379))):
+    with Connection((yield from create_redis(('localhost', 6379)))):
         q1 = Queue('foo')
-        with (yield from Connection(address=('remote.host.org', 6379))):
+        with Connection((yield from create_redis(('remote.host.org', 6379)))):
             q2 = Queue('bar')
