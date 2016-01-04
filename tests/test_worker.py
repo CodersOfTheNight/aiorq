@@ -1,4 +1,5 @@
 from aiorq import Worker, Queue
+from fixtures import say_hello
 
 
 def test_create_worker():
@@ -31,3 +32,14 @@ def test_create_worker():
     w = Worker([Queue('foo'), Queue('bar')])
     assert w.queues[0].name == 'foo'
     assert w.queues[1].name == 'bar'
+
+
+def test_work_and_quit():
+    """Worker processes work, then quits."""
+
+    fooq, barq = Queue('foo'), Queue('bar')
+    w = Worker([fooq, barq])
+    assert not (yield from w.work(burst=True))
+
+    yield from fooq.enqueue(say_hello, name='Frank')
+    assert (yield from w.work(burst=True))
