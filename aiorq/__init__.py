@@ -11,12 +11,11 @@
 # and released under 2-clause BSD license.
 
 from .connections import (Connection, pop_connection, push_connection,
-                          get_current_connection, use_connection)
+                          get_current_connection)
 from .job import cancel_job, get_current_job, requeue_job
 from .queue import get_failed_queue, Queue
 
 
 __all__ = ['Connection', 'pop_connection', 'push_connection',
-           'get_current_connection', 'use_connection', 'cancel_job',
-           'get_current_job', 'requeue_job', 'get_failed_queue',
-           'Queue']
+           'get_current_connection', 'cancel_job', 'get_current_job',
+           'requeue_job', 'get_failed_queue', 'Queue']
