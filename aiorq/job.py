@@ -318,8 +318,7 @@ class Job(SynchronousJob):
         self.ttl = -1
         _job_stack.push(self.id)
         try:
-            # TODO: yield from here since this will run inside event loop.
-            self._result = self.func(*self.args, **self.kwargs)
+            self._result = yield from self.func(*self.args, **self.kwargs)
         finally:
             assert self.id == _job_stack.pop()
         return self._result

@@ -2,15 +2,12 @@ import time
 from datetime import datetime
 
 import pytest
-from rq import (Worker as SynchronousWorker,
-                Connection as SynchronousConnection,
-                Queue as SynchronousQueue)
 from rq.compat import as_text
 from rq.job import JobStatus
 from rq.utils import utcformat
 
 from aiorq import (cancel_job, get_current_job, requeue_job, Queue,
-                   get_failed_queue)
+                   get_failed_queue, Worker)
 from aiorq.job import Job, loads, dumps
 from aiorq.exceptions import NoSuchJobError, UnpickleError
 from aiorq.registry import DeferredJobRegistry
@@ -325,13 +322,11 @@ def test_job_access_outside_job_fails():
 def test_job_access_within_job_function():
     """The current job is accessible within the job function."""
 
-    # TODO: use asynchronous worker.  Job is not processed actually.
     q = Queue()
     # access_self calls get_current_job() and asserts
     yield from q.enqueue(access_self)
-    with SynchronousConnection():
-        w = SynchronousWorker([SynchronousQueue()])
-    w.work(burst=True)
+    w = Worker(q)
+    yield from w.work(burst=True)
 
 
 def test_get_result_ttl():

@@ -33,6 +33,7 @@ from .job import Job
 from .queue import Queue, get_failed_queue
 from .registry import clean_registries, StartedJobRegistry, FinishedJobRegistry
 from .suspension import is_suspended
+from .timeouts import EventLoopDeathPenalty
 
 
 logger = logging.getLogger(__name__)
@@ -43,6 +44,7 @@ class Worker:
 
     redis_worker_namespace_prefix = 'rq:worker:'
     redis_workers_keys = 'rq:workers'
+    death_penalty_class = EventLoopDeathPenalty
     queue_class = Queue
     job_class = Job
 
@@ -385,15 +387,13 @@ class Worker:
 
             # Pickle the result in the same try-except block since we
             # need to use the same exc handling when pickling fails
-            job._result = rv
-
-            self.set_current_job_id(None, pipeline=pipe)
+            yield from self.set_current_job_id(None, pipeline=pipe)
 
             result_ttl = job.get_result_ttl(self.default_result_ttl)
             if result_ttl != 0:
                 job.ended_at = utcnow()
                 job._status = JobStatus.FINISHED
-                job.save(pipeline=pipe)
+                yield from job.save(pipeline=pipe)
 
                 finished_job_registry = FinishedJobRegistry(job.origin, self.connection)
                 yield from finished_job_registry.add(job, result_ttl, pipe)

@@ -1,12 +1,10 @@
 import pytest
-from rq import (Worker as SynchronousWorker,
-                Connection as SynchronousConnection,
-                Queue as SynchronousQueue)
 from rq.compat import as_text
 from rq.job import JobStatus
 
+from aiorq import Worker, Queue
 from aiorq.job import Job
-from aiorq.queue import Queue, FailedQueue
+from aiorq.queue import FailedQueue
 from aiorq.registry import (clean_registries, FinishedJobRegistry,
                             StartedJobRegistry, DeferredJobRegistry)
 from fixtures import say_hello, div_by_zero
@@ -80,25 +78,24 @@ def test_job_execution(redis, registry):
     """Job is removed from StartedJobRegistry after execution."""
 
     # We need synchronous jobs for synchronous workers
-    with SynchronousConnection():
-        queue = SynchronousQueue()
-        worker = SynchronousWorker(queue)
+    queue = Queue()
+    worker = Worker(queue)
 
-    job = queue.enqueue(say_hello)
+    job = yield from queue.enqueue(say_hello)
 
-    worker.prepare_job_execution(job)
+    yield from worker.prepare_job_execution(job)
     assert job.id in (yield from registry.get_job_ids())
 
-    worker.perform_job(job)
+    yield from worker.perform_job(job)
     assert job.id not in (yield from registry.get_job_ids())
 
     # Job that fails
-    job = queue.enqueue(div_by_zero)
+    job = yield from queue.enqueue(div_by_zero)
 
-    worker.prepare_job_execution(job)
+    yield from worker.prepare_job_execution(job)
     assert job.id in (yield from registry.get_job_ids())
 
-    worker.perform_job(job)
+    yield from worker.perform_job(job)
     assert job.id not in (yield from registry.get_job_ids())
 
 
@@ -140,18 +137,17 @@ def test_jobs_are_put_in_registry():
     assert not (yield from registry.get_job_ids())
 
     # We need synchronous jobs for synchronous workers
-    with SynchronousConnection():
-        queue = SynchronousQueue()
-        worker = SynchronousWorker(queue)
+    queue = Queue()
+    worker = Worker(queue)
 
     # Completed jobs are put in FinishedJobRegistry
-    job = queue.enqueue(say_hello)
-    worker.perform_job(job)
+    job = yield from queue.enqueue(say_hello)
+    yield from worker.perform_job(job)
     assert (yield from registry.get_job_ids()) == [job.id]
 
     # Failed jobs are not put in FinishedJobRegistry
-    failed_job = queue.enqueue(div_by_zero)
-    worker.perform_job(failed_job)
+    failed_job = yield from queue.enqueue(div_by_zero)
+    yield from worker.perform_job(failed_job)
     assert (yield from registry.get_job_ids()) == [job.id]
 
 

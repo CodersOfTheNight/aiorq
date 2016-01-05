@@ -1,14 +1,15 @@
-import time
+import asyncio
 
 from aiorq import get_current_job
 from aiorq.decorators import job
 
 
+@asyncio.coroutine
 def say_hello(name=None):
 
     if name is None:
         name = 'Stranger'
-    return 'Hi there, %s!' % (name,)
+    return 'Hi there, {}!'.format(name)
 
 
 def some_calculation(x, y, z=1):
@@ -39,17 +40,21 @@ class CallableObject(object):
         return "I'm callable"
 
 
+@asyncio.coroutine
 def access_self():
 
     assert get_current_job() is not None
 
 
+@asyncio.coroutine
 def long_running_job(timeout=10):
 
+    import time
     time.sleep(timeout)
     return 'Done sleeping...'
 
 
+@asyncio.coroutine
 def echo(*args, **kwargs):
 
     return (args, kwargs)
@@ -62,11 +67,14 @@ class UnicodeStringObject(object):
         return 'é'
 
 
+@asyncio.coroutine
 def div_by_zero(x):
 
     return x / 0
 
 
 @job(queue='default')
+@asyncio.coroutine
 def decorated_job(x, y):
+
     return x + y

@@ -1,10 +1,7 @@
 import pytest
-from rq import (Worker as SynchronousWorker,
-                Connection as SynchronousConnection,
-                Queue as SynchronousQueue)
 from rq.job import JobStatus
 
-from aiorq import Queue, get_failed_queue
+from aiorq import Queue, get_failed_queue, Worker
 from aiorq.exceptions import InvalidJobOperationError, DequeueTimeout
 from aiorq.job import Job
 from aiorq.registry import DeferredJobRegistry
@@ -385,10 +382,8 @@ def test_all_queues():
     assert 'third-queue' in names
 
     # Now empty two queues
-    with SynchronousConnection():
-        w = SynchronousWorker([SynchronousQueue('second-queue'),
-                               SynchronousQueue('third-queue')])
-    w.work(burst=True)
+    w = Worker([q2, q3])
+    yield from w.work(burst=True)
 
     # Queue.all() should still report the empty queues
     assert len((yield from Queue.all())) == 3

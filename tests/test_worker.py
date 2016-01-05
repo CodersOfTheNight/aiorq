@@ -53,3 +53,13 @@ def test_worker_ttl(redis):
     [worker_key] = yield from redis.smembers(Worker.redis_workers_keys)
     assert (yield from redis.ttl(worker_key))
     yield from w.register_death()
+
+
+def test_work_via_string_argument():
+    """Worker processes work fed via string arguments."""
+
+    q = Queue('foo')
+    w = Worker([q])
+    job = yield from q.enqueue('fixtures.say_hello', name='Frank')
+    assert (yield from w.work(burst=True))
+    assert (yield from job.result) == 'Hi there, Frank!'
