@@ -43,3 +43,13 @@ def test_work_and_quit():
 
     yield from fooq.enqueue(say_hello, name='Frank')
     assert (yield from w.work(burst=True))
+
+
+def test_worker_ttl(redis):
+    """Worker ttl."""
+
+    w = Worker([])
+    yield from w.register_birth()
+    [worker_key] = yield from redis.smembers(Worker.redis_workers_keys)
+    assert (yield from redis.ttl(worker_key))
+    yield from w.register_death()
