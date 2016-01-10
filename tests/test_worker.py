@@ -1,3 +1,5 @@
+from rq.utils import utcnow
+
 from aiorq import Worker, Queue
 from fixtures import say_hello
 
@@ -63,3 +65,25 @@ def test_work_via_string_argument():
     job = yield from q.enqueue('fixtures.say_hello', name='Frank')
     assert (yield from w.work(burst=True))
     assert (yield from job.result) == 'Hi there, Frank!'
+
+
+def test_job_times():
+    """Job times are set correctly."""
+
+    q = Queue('foo')
+    w = Worker([q])
+    before = utcnow().replace(microsecond=0)
+    job = yield from q.enqueue(say_hello)
+
+    assert job.enqueued_at
+    assert not job.started_at
+    assert not job.ended_at
+    assert (yield from w.work(burst=True))
+    assert (yield from job.result) == 'Hi there, Stranger!'
+
+    after = utcnow().replace(microsecond=0)
+    yield from job.refresh()
+
+    assert before <= job.enqueued_at <= after
+    assert before <= job.started_at <= after
+    assert before <= job.ended_at <= after
