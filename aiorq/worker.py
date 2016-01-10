@@ -468,7 +468,7 @@ class Worker:
                              traceback.format_exception(*exc_info))
 
         logger.error(exc_string, exc_info=True, extra={
-            'func': job.func_name,
+            'func': job.func_name,  # FIXME: we can fuckup with UnpickleError
             'arguments': job.args,
             'kwargs': job.kwargs,
             'queue': job.origin,

@@ -1,6 +1,8 @@
+import pytest
 from rq.utils import utcnow
 
-from aiorq import Worker, Queue
+from aiorq import Worker, Queue, get_failed_queue
+from aiorq.job import Job
 from fixtures import say_hello
 
 
@@ -87,3 +89,36 @@ def test_job_times():
     assert before <= job.enqueued_at <= after
     assert before <= job.started_at <= after
     assert before <= job.ended_at <= after
+
+
+@pytest.mark.xfail
+def test_work_is_unreadable(redis):
+    """Unreadable jobs are put on the failed queue."""
+
+    q = Queue()
+    failed_q = get_failed_queue()
+
+    assert (yield from failed_q.count) == 0
+    assert (yield from q.count) == 0
+
+    # NOTE: We have to fake this enqueueing for this test case.
+    # What we're simulating here is a call to a function that is not
+    # importable from the worker process.
+    job = Job.create(func=say_hello, args=(3,))
+    yield from job.save()
+    data = yield from redis.hget(job.key, 'data')
+    invalid_data = data.replace(b'say_hello', b'nonexisting')
+    assert data != invalid_data
+    yield from redis.hset(job.key, 'data', invalid_data)
+
+    # We use the low-level internal function to enqueue any data
+    # (bypassing validity checks)
+    yield from q.push_job_id(job.id)
+
+    assert (yield from q.count) == 1
+
+    # All set, we're going to process it
+    w = Worker([q])
+    yield from w.work(burst=True)   # should silently pass
+    assert (yield from q.count) == 0
+    assert (yield from failed_q.count) == 1
