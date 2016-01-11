@@ -1,4 +1,3 @@
-import pytest
 from rq.utils import utcnow
 
 from aiorq import Worker, Queue, get_failed_queue
@@ -91,7 +90,6 @@ def test_job_times():
     assert before <= job.ended_at <= after
 
 
-@pytest.mark.xfail
 def test_work_is_unreadable(redis):
     """Unreadable jobs are put on the failed queue."""
 
@@ -106,8 +104,10 @@ def test_work_is_unreadable(redis):
     # importable from the worker process.
     job = Job.create(func=say_hello, args=(3,))
     yield from job.save()
+
+    # NOTE: replacement and original strings must have the same length
     data = yield from redis.hget(job.key, 'data')
-    invalid_data = data.replace(b'say_hello', b'nonexisting')
+    invalid_data = data.replace(b'say_hello', b'fake_attr')
     assert data != invalid_data
     yield from redis.hset(job.key, 'data', invalid_data)
 
