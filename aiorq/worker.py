@@ -413,7 +413,7 @@ class Worker:
                 # Ensure that custom exception handlers are called
                 # even if Redis is down
                 pass
-            self.handle_exception(job, *sys.exc_info())
+            yield from self.handle_exception(job, *sys.exc_info())
             return False
 
         logger.info('%s: %s (%s)', green(job.origin), blue('Job OK'), job.id)
@@ -461,6 +461,7 @@ class Worker:
         if not pipeline:
             yield from coroutine
 
+    @asyncio.coroutine
     def handle_exception(self, job, *exc_info):
         """Walks the exception handler stack to delegate exception handling."""
 
@@ -473,7 +474,7 @@ class Worker:
 
         for handler in reversed(self._exc_handlers):
             logger.debug('Invoking exception handler %s', handler)
-            fallthrough = handler(job, *exc_info)
+            fallthrough = yield from handler(job, *exc_info)
 
             # Only handlers with explicit return values should disable
             # further exc handling, so interpret a None return value
