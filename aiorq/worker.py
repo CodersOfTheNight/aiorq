@@ -464,10 +464,7 @@ class Worker:
     def handle_exception(self, job, *exc_info):
         """Walks the exception handler stack to delegate exception handling."""
 
-        exc_string = ''.join(traceback.format_exception_only(*exc_info[:2]) +
-                             traceback.format_exception(*exc_info))
-
-        logger.error(exc_string, exc_info=True, extra={
+        logger.exception('Coroutine error', extra={
             'func': job.func_name,  # FIXME: we can fuckup with UnpickleError
             'arguments': job.args,
             'kwargs': job.kwargs,
