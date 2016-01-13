@@ -484,3 +484,11 @@ class Worker:
 
             if not fallthrough:
                 break
+
+    @asyncio.coroutine
+    def get_current_job_id(self, pipeline=None):
+
+        connection = pipeline if pipeline else self.connection
+        coroutine = connection.hget(self.key, 'current_job')
+        if not pipeline:
+            return as_text((yield from coroutine))

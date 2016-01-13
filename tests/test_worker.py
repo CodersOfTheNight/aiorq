@@ -2,7 +2,8 @@ from rq.utils import utcnow
 
 from aiorq import Worker, Queue, get_failed_queue
 from aiorq.job import Job
-from fixtures import say_hello
+from fixtures import say_hello, div_by_zero
+from helpers import strip_microseconds
 
 
 def test_create_worker():
@@ -122,3 +123,38 @@ def test_work_is_unreadable(redis):
     yield from w.work(burst=True)   # should silently pass
     assert (yield from q.count) == 0
     assert (yield from failed_q.count) == 1
+
+
+def test_work_fails():
+    """Failing jobs are put on the failed queue."""
+
+    q = Queue()
+    failed_q = get_failed_queue()
+
+    # Preconditions
+    assert not (yield from failed_q.count)
+    assert not (yield from q.count)
+
+    # Action
+    job = yield from q.enqueue(div_by_zero)
+    assert (yield from q.count) == 1
+
+    # keep for later
+    enqueued_at_date = strip_microseconds(job.enqueued_at)
+
+    w = Worker([q])
+    yield from w.work(burst=True)  # should silently pass
+
+    # Postconditions
+    assert not (yield from q.count)
+    assert (yield from failed_q.count) == 1
+    assert not (yield from w.get_current_job_id())
+
+    # Check the job
+    job = yield from Job.fetch(job.id)
+    assert job.origin == q.name
+
+    # Should be the original enqueued_at date, not the date of enqueueing
+    # to the failed queue
+    assert job.enqueued_at == enqueued_at_date
+    assert job.exc_info  # should contain exc_info
