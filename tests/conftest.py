@@ -36,6 +36,20 @@ def loop():
 
 
 @pytest.fixture
+def set_loop():
+    """Suppress pytest errors about missing fixtures.
+
+    Current event loop for asyncio will be set by asynchronous test
+    decorator instead of this fixture.  This fixture serves for
+    indication to preserve global event loop and keep it accessible
+    for asyncio.sleep for example.
+
+    """
+
+    pass
+
+
+@pytest.fixture
 def registry():
     """Suppress pytest errors about missing fixtures.
 
