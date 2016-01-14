@@ -1,3 +1,5 @@
+import asyncio
+
 from rq.utils import utcnow
 
 from aiorq import Worker, Queue, get_failed_queue
@@ -158,3 +160,35 @@ def test_work_fails():
     # to the failed queue
     assert job.enqueued_at == enqueued_at_date
     assert job.exc_info  # should contain exc_info
+
+
+def test_custom_exc_handling():
+    """Custom exception handling."""
+
+    @asyncio.coroutine
+    def black_hole(job, *exc_info):
+        # Don't fall through to default behaviour (moving to failed
+        # queue)
+        return False
+
+    q = Queue()
+    failed_q = get_failed_queue()
+
+    # Preconditions
+    assert not (yield from failed_q.count)
+    assert not (yield from q.count)
+
+    # Action
+    job = yield from q.enqueue(div_by_zero)
+    assert (yield from q.count) == 1
+
+    w = Worker([q], exception_handlers=black_hole)
+    yield from w.work(burst=True)  # should silently pass
+
+    # Postconditions
+    assert not (yield from q.count)
+    assert not (yield from failed_q.count)
+
+    # Check the job
+    job = yield from Job.fetch(job.id)
+    assert job.is_failed
