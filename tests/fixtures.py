@@ -88,3 +88,10 @@ mock = Mock()
 def touch_a_mock():
 
     mock(1)
+
+
+@asyncio.coroutine
+def touch_a_mock_after_timeout(timeout):
+
+    yield from asyncio.sleep(timeout)
+    mock(1)

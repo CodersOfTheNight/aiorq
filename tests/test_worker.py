@@ -1,10 +1,13 @@
 import asyncio
 
+import pytest
+from rq.compat import as_text
 from rq.utils import utcnow
 
 from aiorq import Worker, Queue, get_failed_queue
 from aiorq.job import Job
-from fixtures import say_hello, div_by_zero, touch_a_mock, mock
+from fixtures import (say_hello, div_by_zero, mock, touch_a_mock,
+                      touch_a_mock_after_timeout)
 from helpers import strip_microseconds
 
 
@@ -209,4 +212,25 @@ def test_cancelled_jobs_arent_executed(redis):
 
     # Should not have created evidence of execution
     assert not mock.call_count
+    mock.reset_mock()
+
+
+@pytest.mark.xfail
+def test_timeouts(set_loop):
+    """Worker kills jobs after timeout."""
+
+    q = Queue()
+    w = Worker([q])
+
+    # Put it on the queue with a timeout value
+    res = yield from q.enqueue(
+        touch_a_mock_after_timeout, args=(4,), timeout=1)
+
+    assert not mock.call_count
+    yield from w.work(burst=True)
+    assert not mock.call_count
+
+    # TODO: Having to do the manual refresh() here is really ugly!
+    yield from res.refresh()
+    assert 'JobTimeoutException' in as_text(res.exc_info)
     mock.reset_mock()
