@@ -4,7 +4,7 @@ from rq.utils import utcnow
 
 from aiorq import Worker, Queue, get_failed_queue
 from aiorq.job import Job
-from fixtures import say_hello, div_by_zero
+from fixtures import say_hello, div_by_zero, touch_a_mock, mock
 from helpers import strip_microseconds
 
 
@@ -192,3 +192,21 @@ def test_custom_exc_handling():
     # Check the job
     job = yield from Job.fetch(job.id)
     assert job.is_failed
+
+
+def test_cancelled_jobs_arent_executed(redis):
+    """Cancelling jobs."""
+
+    q = Queue()
+    job = yield from q.enqueue(touch_a_mock)
+
+    # Here, we cancel the job, so the sentinel file may not be created
+    yield from redis.delete(job.key)
+
+    w = Worker([q])
+    yield from w.work(burst=True)
+    assert not (yield from q.count)
+
+    # Should not have created evidence of execution
+    assert not mock.call_count
+    mock.reset_mock()

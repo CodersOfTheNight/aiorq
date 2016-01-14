@@ -1,4 +1,5 @@
 import asyncio
+from unittest.mock import Mock
 
 from aiorq import get_current_job
 from aiorq.decorators import job
@@ -78,3 +79,12 @@ def div_by_zero(x):
 def decorated_job(x, y):
 
     return x + y
+
+
+mock = Mock()
+
+
+@asyncio.coroutine
+def touch_a_mock():
+
+    mock(1)
