@@ -28,12 +28,11 @@ from rq.worker import (WorkerStatus, StopRequested, signal_name,
 from rq.utils import ensure_list, import_attribute, utcformat, utcnow, as_text
 
 from .connections import resolve_connection
-from .exceptions import DequeueTimeout
+from .exceptions import DequeueTimeout, JobTimeoutException
 from .job import Job
 from .queue import Queue, get_failed_queue
 from .registry import clean_registries, StartedJobRegistry, FinishedJobRegistry
 from .suspension import is_suspended
-from .timeouts import EventLoopDeathPenalty
 
 
 logger = logging.getLogger(__name__)
@@ -44,7 +43,6 @@ class Worker:
 
     redis_worker_namespace_prefix = 'rq:worker:'
     redis_workers_keys = 'rq:workers'
-    death_penalty_class = EventLoopDeathPenalty
     queue_class = Queue
     job_class = Job
 
@@ -382,8 +380,11 @@ class Worker:
         started_job_registry = StartedJobRegistry(job.origin, self.connection)
 
         try:
-            with self.death_penalty_class(job.timeout or self.queue_class.DEFAULT_TIMEOUT):
-                rv = yield from job.perform()
+            timeout = job.timeout or self.queue_class.DEFAULT_TIMEOUT
+            try:
+                rv = yield from asyncio.wait_for(job.perform(), timeout)
+            except asyncio.TimeoutError as error:
+                raise JobTimeoutException from error
 
             # Pickle the result in the same try-except block since we
             # need to use the same exc handling when pickling fails

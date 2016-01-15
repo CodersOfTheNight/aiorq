@@ -1,6 +1,5 @@
 import asyncio
 
-import pytest
 from rq.compat import as_text
 from rq.utils import utcnow
 
@@ -215,7 +214,6 @@ def test_cancelled_jobs_arent_executed(redis):
     mock.reset_mock()
 
 
-@pytest.mark.xfail
 def test_timeouts(set_loop):
     """Worker kills jobs after timeout."""
 

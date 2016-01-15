@@ -11,3 +11,9 @@
 # Driessen and released under 2-clause BSD license.
 
 from rq.exceptions import *     # noqa
+
+
+class JobTimeoutException(Exception):
+    """Error signify that coroutine is not finished in time."""
+
+    pass
