@@ -51,7 +51,9 @@ def async_test(f):
         assert not len(_connection_stack), \
             'Test require empty connection stack'
         loop = asyncio.new_event_loop()
-        if not 'set_loop' in kwargs:
+        if 'set_loop' in kwargs:
+            asyncio.set_event_loop(loop)
+        else:
             asyncio.set_event_loop(None)
         loop.run_until_complete(coroutine(loop, kwargs))
         loop.stop()
