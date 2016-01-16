@@ -163,7 +163,8 @@ class Worker:
 
             if burst:
                 logger.info('Suspended in burst mode, exiting')
-                logger.info('Note: There could still be unfinished jobs on the queue')
+                logger.info(
+                    'Note: There could still be unfinished jobs on the queue')
                 raise StopRequested
 
             if not notified:
@@ -207,12 +208,18 @@ class Worker:
                         logger.info('Stopping on request')
                         break
 
-                    timeout = None if burst else max(1, self.default_worker_ttl - 60)
+                    if burst:
+                        timeout = None
+                    else:
+                        timeout = max(1, self.default_worker_ttl - 60)
 
-                    result = yield from self.dequeue_job_and_maintain_ttl(timeout)
+                    result = yield from self.dequeue_job_and_maintain_ttl(
+                        timeout)
+
                     if result is None:
                         if burst:
-                            logger.info("RQ worker %s done, quitting", self.key)
+                            logger.info(
+                                'RQ worker %s done, quitting', self.key)
                         break
                 except StopRequested:
                     break
@@ -397,7 +404,8 @@ class Worker:
                 job._status = JobStatus.FINISHED
                 yield from job.save(pipeline=pipe)
 
-                finished_job_registry = FinishedJobRegistry(job.origin, self.connection)
+                finished_job_registry = FinishedJobRegistry(
+                    job.origin, self.connection)
                 yield from finished_job_registry.add(job, result_ttl, pipe)
 
             yield from job.cleanup(result_ttl, pipeline=pipe)
@@ -428,7 +436,8 @@ class Worker:
         elif result_ttl > 0:
             logger.info('Result is kept for %s seconds', result_ttl)
         else:
-            logger.warning('Result will never expire, clean up result key manually')
+            logger.warning(
+                'Result will never expire, clean up result key manually')
 
         return True
 
