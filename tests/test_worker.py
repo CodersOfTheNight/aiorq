@@ -232,3 +232,25 @@ def test_timeouts(set_loop):
     yield from res.refresh()
     assert 'JobTimeoutException' in as_text(res.exc_info)
     mock.reset_mock()
+
+
+def test_worker_sets_result_ttl(redis, loop):
+    """Ensure that Worker properly sets result_ttl for individual jobs."""
+
+    q = Queue()
+    job = yield from q.enqueue(say_hello, args=('Frank',), result_ttl=10)
+    w = Worker([q])
+    yield from w.work(burst=True, loop=loop)
+    assert (yield from redis.ttl(job.key))
+
+    # Job with -1 result_ttl don't expire
+    job = yield from q.enqueue(say_hello, args=('Frank',), result_ttl=-1)
+    w = Worker([q])
+    yield from w.work(burst=True, loop=loop)
+    assert (yield from redis.ttl(job.key)) == -1
+
+    # Job with result_ttl = 0 gets deleted immediately
+    job = yield from q.enqueue(say_hello, args=('Frank',), result_ttl=0)
+    w = Worker([q])
+    yield from w.work(burst=True, loop=loop)
+    assert not (yield from redis.get(job.key))
