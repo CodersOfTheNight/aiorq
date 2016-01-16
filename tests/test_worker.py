@@ -302,3 +302,17 @@ def test_job_dependency(loop):
     yield from w.work(burst=True, loop=loop)
     job = yield from Job.fetch(job.id)
     assert (yield from job.get_status()) != JobStatus.FINISHED
+
+
+def test_get_current_job(redis):
+    """Ensure worker.get_current_job() works properly."""
+
+    q = Queue()
+    worker = Worker([q])
+    job = yield from q.enqueue_call(say_hello)
+
+    assert not (yield from redis.hget(worker.key, 'current_job'))
+    yield from worker.set_current_job_id(job.id)
+    current_id = as_text((yield from redis.hget(worker.key, 'current_job')))
+    assert (yield from worker.get_current_job_id()) == current_id
+    assert (yield from worker.get_current_job()) == job

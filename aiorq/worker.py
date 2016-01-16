@@ -473,6 +473,25 @@ class Worker:
             yield from coroutine
 
     @asyncio.coroutine
+    def get_current_job_id(self, pipeline=None):
+
+        connection = pipeline if pipeline else self.connection
+        coroutine = connection.hget(self.key, 'current_job')
+        if not pipeline:
+            return as_text((yield from coroutine))
+
+    @asyncio.coroutine
+    def get_current_job(self):
+        """Returns the job id of the currently executing job."""
+
+        job_id = yield from self.get_current_job_id()
+
+        if job_id is None:
+            return None
+
+        return (yield from self.job_class.fetch(job_id, self.connection))
+
+    @asyncio.coroutine
     def handle_exception(self, job, *exc_info):
         """Walks the exception handler stack to delegate exception handling."""
 
@@ -495,11 +514,3 @@ class Worker:
 
             if not fallthrough:
                 break
-
-    @asyncio.coroutine
-    def get_current_job_id(self, pipeline=None):
-
-        connection = pipeline if pipeline else self.connection
-        coroutine = connection.hget(self.key, 'current_job')
-        if not pipeline:
-            return as_text((yield from coroutine))
