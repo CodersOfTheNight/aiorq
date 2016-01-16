@@ -316,3 +316,14 @@ def test_get_current_job(redis):
     current_id = as_text((yield from redis.hget(worker.key, 'current_job')))
     assert (yield from worker.get_current_job_id()) == current_id
     assert (yield from worker.get_current_job()) == job
+
+
+def test_custom_job_class():
+    """Ensure Worker accepts custom job class."""
+
+    class CustomJob:
+        pass
+
+    q = Queue()
+    worker = Worker([q], job_class=CustomJob)
+    assert worker.job_class == CustomJob
