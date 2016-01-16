@@ -358,7 +358,7 @@ def test_enqueue_explicit_args():
         ((1,), {'timeout': 1, 'result_ttl': 1})
 
 
-def test_all_queues():
+def test_all_queues(loop):
     """All queues"""
 
     q1 = Queue('first-queue')
@@ -383,7 +383,7 @@ def test_all_queues():
 
     # Now empty two queues
     w = Worker([q2, q3])
-    yield from w.work(burst=True)
+    yield from w.work(burst=True, loop=loop)
 
     # Queue.all() should still report the empty queues
     assert len((yield from Queue.all())) == 3

@@ -129,7 +129,7 @@ def test_finished_cleanup(redis, timestamp):
     assert (yield from registry.get_job_ids()) == ['baz']
 
 
-def test_jobs_are_put_in_registry():
+def test_jobs_are_put_in_registry(loop):
     """Completed jobs are added to FinishedJobRegistry."""
 
     registry = FinishedJobRegistry()
@@ -142,7 +142,7 @@ def test_jobs_are_put_in_registry():
 
     # Completed jobs are put in FinishedJobRegistry
     job = yield from queue.enqueue(say_hello)
-    yield from worker.perform_job(job)
+    yield from worker.perform_job(job, loop=loop)
     assert (yield from registry.get_job_ids()) == [job.id]
 
     # Failed jobs are not put in FinishedJobRegistry

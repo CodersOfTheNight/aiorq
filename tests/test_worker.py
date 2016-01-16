@@ -63,17 +63,17 @@ def test_worker_ttl(redis):
     yield from w.register_death()
 
 
-def test_work_via_string_argument():
+def test_work_via_string_argument(loop):
     """Worker processes work fed via string arguments."""
 
     q = Queue('foo')
     w = Worker([q])
     job = yield from q.enqueue('fixtures.say_hello', name='Frank')
-    assert (yield from w.work(burst=True))
+    assert (yield from w.work(burst=True, loop=loop))
     assert (yield from job.result) == 'Hi there, Frank!'
 
 
-def test_job_times():
+def test_job_times(loop):
     """Job times are set correctly."""
 
     q = Queue('foo')
@@ -84,7 +84,7 @@ def test_job_times():
     assert job.enqueued_at
     assert not job.started_at
     assert not job.ended_at
-    assert (yield from w.work(burst=True))
+    assert (yield from w.work(burst=True, loop=loop))
     assert (yield from job.result) == 'Hi there, Stranger!'
 
     after = utcnow().replace(microsecond=0)

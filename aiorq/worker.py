@@ -152,7 +152,7 @@ class Worker:
             yield from coroutine
 
     @asyncio.coroutine
-    def check_for_suspension(self, burst):
+    def check_for_suspension(self, burst, *, loop=None):
         """Check to see if workers have been suspended by `rq suspend`"""
 
         before_state = None
@@ -177,7 +177,7 @@ class Worker:
             yield from self.set_state(before_state)
 
     @asyncio.coroutine
-    def work(self, burst=False):
+    def work(self, burst=False, *, loop=None):
         """Starts the work loop.
 
         Pops and performs all jobs on the current list of queues.
@@ -198,7 +198,7 @@ class Worker:
         try:
             while True:
                 try:
-                    yield from self.check_for_suspension(burst)
+                    yield from self.check_for_suspension(burst, loop=loop)
 
                     if self.should_run_maintenance_tasks:
                         yield from self.clean_registries()
@@ -218,7 +218,7 @@ class Worker:
                     break
 
                 job, queue = result
-                yield from self.execute_job(job)
+                yield from self.execute_job(job, loop=loop)
                 yield from self.heartbeat()
 
                 if (yield from job.get_status()) == JobStatus.FINISHED:
@@ -360,15 +360,15 @@ class Worker:
             yield from coroutine
 
     @asyncio.coroutine
-    def execute_job(self, job):
+    def execute_job(self, job, *, loop=None):
         """Send a job into asyncio event loop."""
 
         yield from self.set_state('busy')
-        yield from self.perform_job(job)
+        yield from self.perform_job(job, loop=loop)
         yield from self.set_state('idle')
 
     @asyncio.coroutine
-    def perform_job(self, job):
+    def perform_job(self, job, *, loop=None):
         """Performs the actual work of a job.
 
         Will/should only be called inside the work horse's process.
@@ -382,7 +382,8 @@ class Worker:
         try:
             timeout = job.timeout or self.queue_class.DEFAULT_TIMEOUT
             try:
-                rv = yield from asyncio.wait_for(job.perform(), timeout)
+                rv = yield from asyncio.wait_for(
+                    job.perform(), timeout, loop=loop)
             except asyncio.TimeoutError as error:
                 raise JobTimeoutException from error
 
