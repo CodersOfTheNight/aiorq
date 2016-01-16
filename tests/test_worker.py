@@ -1,6 +1,7 @@
 import asyncio
 
 from rq.compat import as_text
+from rq.job import JobStatus
 from rq.utils import utcnow
 
 from aiorq import Worker, Queue, get_failed_queue
@@ -254,3 +255,32 @@ def test_worker_sets_result_ttl(redis, loop):
     w = Worker([q])
     yield from w.work(burst=True, loop=loop)
     assert not (yield from redis.get(job.key))
+
+
+def test_worker_sets_job_status(loop):
+    """Ensure that worker correctly sets job status."""
+
+    q = Queue()
+    w = Worker([q])
+
+    job = yield from q.enqueue(say_hello)
+    assert (yield from job.get_status()) == JobStatus.QUEUED
+    assert (yield from job.is_queued)
+    assert not (yield from job.is_finished)
+    assert not (yield from job.is_failed)
+
+    yield from w.work(burst=True, loop=loop)
+    job = yield from Job.fetch(job.id)
+    assert (yield from job.get_status()) == JobStatus.FINISHED
+    assert not (yield from job.is_queued)
+    assert (yield from job.is_finished)
+    assert not (yield from job.is_failed)
+
+    # Failed jobs should set status to "failed"
+    job = yield from q.enqueue(div_by_zero, args=(1,))
+    yield from w.work(burst=True, loop=loop)
+    job = yield from Job.fetch(job.id)
+    assert (yield from job.get_status()) == JobStatus.FAILED
+    assert not (yield from job.is_queued)
+    assert not (yield from job.is_finished)
+    assert (yield from job.is_failed)
