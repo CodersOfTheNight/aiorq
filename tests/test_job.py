@@ -319,14 +319,14 @@ def test_job_access_outside_job_fails():
     assert not (yield from get_current_job())
 
 
-def test_job_access_within_job_function():
+def test_job_access_within_job_function(loop):
     """The current job is accessible within the job function."""
 
     q = Queue()
     # access_self calls get_current_job() and asserts
     yield from q.enqueue(access_self)
     w = Worker(q)
-    yield from w.work(burst=True)
+    yield from w.work(burst=True, loop=loop)
 
 
 def test_get_result_ttl():
