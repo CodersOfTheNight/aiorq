@@ -284,3 +284,21 @@ def test_worker_sets_job_status(loop):
     assert not (yield from job.is_queued)
     assert not (yield from job.is_finished)
     assert (yield from job.is_failed)
+
+
+def test_job_dependency(loop):
+    """Enqueue dependent jobs only if their parents don't fail."""
+
+    q = Queue()
+    w = Worker([q])
+    parent_job = yield from q.enqueue(say_hello)
+    job = yield from q.enqueue_call(say_hello, depends_on=parent_job)
+    yield from w.work(burst=True, loop=loop)
+    job = yield from Job.fetch(job.id)
+    assert (yield from job.get_status()) == JobStatus.FINISHED
+
+    parent_job = yield from q.enqueue(div_by_zero)
+    job = yield from q.enqueue_call(say_hello, depends_on=parent_job)
+    yield from w.work(burst=True, loop=loop)
+    job = yield from Job.fetch(job.id)
+    assert (yield from job.get_status()) != JobStatus.FINISHED
