@@ -42,15 +42,15 @@ def test_create_worker():
     assert w.queues[1].name == 'bar'
 
 
-def test_work_and_quit():
+def test_work_and_quit(loop):
     """Worker processes work, then quits."""
 
     fooq, barq = Queue('foo'), Queue('bar')
     w = Worker([fooq, barq])
-    assert not (yield from w.work(burst=True))
+    assert not (yield from w.work(burst=True, loop=loop))
 
     yield from fooq.enqueue(say_hello, name='Frank')
-    assert (yield from w.work(burst=True))
+    assert (yield from w.work(burst=True, loop=loop))
 
 
 def test_worker_ttl(redis):
@@ -95,7 +95,7 @@ def test_job_times(loop):
     assert before <= job.ended_at <= after
 
 
-def test_work_is_unreadable(redis):
+def test_work_is_unreadable(redis, loop):
     """Unreadable jobs are put on the failed queue."""
 
     q = Queue()
@@ -124,12 +124,12 @@ def test_work_is_unreadable(redis):
 
     # All set, we're going to process it
     w = Worker([q])
-    yield from w.work(burst=True)   # should silently pass
+    yield from w.work(burst=True, loop=loop)  # Should silently pass
     assert (yield from q.count) == 0
     assert (yield from failed_q.count) == 1
 
 
-def test_work_fails():
+def test_work_fails(loop):
     """Failing jobs are put on the failed queue."""
 
     q = Queue()
@@ -147,7 +147,7 @@ def test_work_fails():
     enqueued_at_date = strip_microseconds(job.enqueued_at)
 
     w = Worker([q])
-    yield from w.work(burst=True)  # should silently pass
+    yield from w.work(burst=True, loop=loop)  # Should silently pass
 
     # Postconditions
     assert not (yield from q.count)
@@ -164,7 +164,7 @@ def test_work_fails():
     assert job.exc_info  # should contain exc_info
 
 
-def test_custom_exc_handling():
+def test_custom_exc_handling(loop):
     """Custom exception handling."""
 
     @asyncio.coroutine
@@ -185,7 +185,7 @@ def test_custom_exc_handling():
     assert (yield from q.count) == 1
 
     w = Worker([q], exception_handlers=black_hole)
-    yield from w.work(burst=True)  # should silently pass
+    yield from w.work(burst=True, loop=loop)  # Should silently pass
 
     # Postconditions
     assert not (yield from q.count)
@@ -196,7 +196,7 @@ def test_custom_exc_handling():
     assert job.is_failed
 
 
-def test_cancelled_jobs_arent_executed(redis):
+def test_cancelled_jobs_arent_executed(redis, loop):
     """Cancelling jobs."""
 
     q = Queue()
@@ -206,7 +206,7 @@ def test_cancelled_jobs_arent_executed(redis):
     yield from redis.delete(job.key)
 
     w = Worker([q])
-    yield from w.work(burst=True)
+    yield from w.work(burst=True, loop=loop)
     assert not (yield from q.count)
 
     # Should not have created evidence of execution
