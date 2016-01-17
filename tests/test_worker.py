@@ -7,6 +7,7 @@ from rq.utils import utcnow
 from aiorq import Worker, Queue, get_failed_queue
 from aiorq.job import Job
 from aiorq.registry import StartedJobRegistry
+from aiorq.suspension import resume, suspend
 from fixtures import (say_hello, div_by_zero, mock, touch_a_mock,
                       touch_a_mock_after_timeout)
 from helpers import strip_microseconds
@@ -357,3 +358,25 @@ def test_work_unicode_friendly(loop):
     assert (yield from w.work(burst=True, loop=loop))
     assert (yield from job.result) == 'Hi there, Adam!'
     assert job.description == '你好 世界!'
+
+
+def test_suspend_worker_execution(redis, loop):
+    """Test Pause Worker Execution."""
+
+    q = Queue()
+    w = Worker([q])
+    yield from q.enqueue(touch_a_mock)
+
+    yield from suspend(redis)
+
+    yield from w.work(burst=True, loop=loop)
+    assert (yield from q.count) == 1
+    assert not mock.call_count
+
+    yield from resume(redis)
+
+    yield from w.work(burst=True, loop=loop)
+    assert not (yield from q.count)
+    assert mock.call_count
+
+    mock.reset_mock()
