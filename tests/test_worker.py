@@ -6,6 +6,7 @@ from rq.utils import utcnow
 
 from aiorq import Worker, Queue, get_failed_queue
 from aiorq.job import Job
+from aiorq.registry import StartedJobRegistry
 from fixtures import (say_hello, div_by_zero, mock, touch_a_mock,
                       touch_a_mock_after_timeout)
 from helpers import strip_microseconds
@@ -327,3 +328,22 @@ def test_custom_job_class():
     q = Queue()
     worker = Worker([q], job_class=CustomJob)
     assert worker.job_class == CustomJob
+
+
+import pytest
+@pytest.mark.xfail
+def test_prepare_job_execution(redis):
+    """Prepare job execution does the necessary bookkeeping."""
+
+    queue = Queue(connection=redis)
+    job = yield from queue.enqueue(say_hello)
+    worker = Worker([queue])
+    yield from worker.prepare_job_execution(job)
+
+    # Updates working queue
+    registry = StartedJobRegistry(connection=redis)
+    assert (yield from registry.get_job_ids()) == [job.id]
+
+    # Updates worker statuses
+    assert (yield from worker.get_state()) == 'busy'
+    assert (yield from worker.get_current_job_id()) == job.id
