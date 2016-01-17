@@ -25,7 +25,8 @@ from rq.logutils import setup_loghandlers
 from rq.job import JobStatus
 from rq.worker import (WorkerStatus, StopRequested, signal_name,
                        green, blue, yellow)
-from rq.utils import ensure_list, import_attribute, utcformat, utcnow, as_text
+from rq.utils import (ensure_list, import_attribute, utcformat, utcnow,
+                      as_text, utcparse)
 
 from .connections import resolve_connection
 from .exceptions import DequeueTimeout, JobTimeoutException
@@ -151,6 +152,15 @@ class Worker:
         pipe.hset(self.key, 'death', utcformat(utcnow()))
         pipe.expire(self.key, 60)
         yield from pipe.execute()
+
+    @property
+    @asyncio.coroutine
+    def birth_date(self):
+        """Fetches birth date from Redis."""
+
+        birth_timestamp = yield from self.connection.hget(self.key, 'birth')
+        if birth_timestamp:
+            return utcparse(as_text(birth_timestamp))
 
     def get_state(self):
         return self._state

@@ -414,3 +414,16 @@ def test_worker_hash_():
     w3 = Worker([q], name="worker1")
     worker_set = {w1, w2, w3}
     assert len(worker_set) == 2
+
+
+def test_worker_sets_birth():
+    """Ensure worker correctly sets worker birth date."""
+
+    q = Queue()
+    w = Worker([q])
+
+    yield from w.register_birth()
+
+    birth_date = yield from w.birth_date
+    assert birth_date
+    assert type(birth_date).__name__ == 'datetime'
