@@ -142,6 +142,9 @@ class Worker:
         pipe.expire(self.key, 60)
         yield from pipe.execute()
 
+    def get_state(self):
+        return self._state
+
     @asyncio.coroutine
     def set_state(self, state, pipeline=None):
 

@@ -330,8 +330,6 @@ def test_custom_job_class():
     assert worker.job_class == CustomJob
 
 
-import pytest
-@pytest.mark.xfail
 def test_prepare_job_execution(redis):
     """Prepare job execution does the necessary bookkeeping."""
 
@@ -345,5 +343,5 @@ def test_prepare_job_execution(redis):
     assert (yield from registry.get_job_ids()) == [job.id]
 
     # Updates worker statuses
-    assert (yield from worker.get_state()) == 'busy'
+    assert worker.get_state() == 'busy'
     assert (yield from worker.get_current_job_id()) == job.id
