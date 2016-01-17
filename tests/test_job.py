@@ -369,7 +369,7 @@ def test_ttl_via_enqueue(redis):
     assert job.get_ttl() == ttl
 
 
-def test_never_expire_during_execution(redis):
+def test_never_expire_during_execution(redis, set_loop):
     """Test what happens when job expires during execution."""
 
     ttl = 1

@@ -50,8 +50,7 @@ def access_self():
 @asyncio.coroutine
 def long_running_job(timeout=10):
 
-    import time
-    time.sleep(timeout)
+    yield from asyncio.sleep(timeout)
     return 'Done sleeping...'
 
 
