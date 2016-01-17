@@ -403,3 +403,14 @@ def test_suspend_with_duration(redis, loop):
     # now clear the queue
     yield from w.work(burst=True, loop=loop)
     assert (yield from q.count) == 0
+
+
+def test_worker_hash_():
+    """Workers are hashed by their name attribute."""
+
+    q = Queue('foo')
+    w1 = Worker([q], name="worker1")
+    w2 = Worker([q], name="worker2")
+    w3 = Worker([q], name="worker1")
+    worker_set = {w1, w2, w3}
+    assert len(worker_set) == 2

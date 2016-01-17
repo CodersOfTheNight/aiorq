@@ -99,6 +99,16 @@ class Worker:
 
         self._exc_handlers.append(handler)
 
+    def __hash__(self):
+        """The hash doesn't take the database/connection into account."""
+
+        return hash(self.name)
+
+    def __eq__(self, other):
+        """Equality does not take the database/connection into account."""
+
+        return self.name == other.name
+
     @asyncio.coroutine
     def move_to_failed_queue(self, job, *exc_info):
         """Default exception handler.
