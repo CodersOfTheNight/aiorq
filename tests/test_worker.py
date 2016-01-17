@@ -427,3 +427,16 @@ def test_worker_sets_birth():
     birth_date = yield from w.birth_date
     assert birth_date
     assert type(birth_date).__name__ == 'datetime'
+
+
+def test_worker_sets_death():
+    """Ensure worker correctly sets worker death date."""
+
+    q = Queue()
+    w = Worker([q])
+
+    yield from w.register_death()
+
+    death_date = yield from w.death_date
+    assert death_date
+    assert type(death_date).__name__ == 'datetime'

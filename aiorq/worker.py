@@ -162,6 +162,15 @@ class Worker:
         if birth_timestamp:
             return utcparse(as_text(birth_timestamp))
 
+    @property
+    @asyncio.coroutine
+    def death_date(self):
+        """Fetches death date from Redis."""
+
+        death_timestamp = yield from self.connection.hget(self.key, 'death')
+        if death_timestamp:
+            return utcparse(as_text(death_timestamp))
+
     def get_state(self):
         return self._state
 
