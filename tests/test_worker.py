@@ -9,7 +9,7 @@ from aiorq.job import Job
 from aiorq.registry import StartedJobRegistry
 from aiorq.suspension import resume, suspend
 from fixtures import (say_hello, div_by_zero, mock, touch_a_mock,
-                      touch_a_mock_after_timeout)
+                      touch_a_mock_after_timeout, do_nothing)
 from helpers import strip_microseconds
 
 
@@ -380,3 +380,26 @@ def test_suspend_worker_execution(redis, loop):
     assert mock.call_count
 
     mock.reset_mock()
+
+
+def test_suspend_with_duration(redis, loop):
+    """Test worker execution will continue after specified duration."""
+
+    q = Queue()
+    w = Worker([q])
+    for i in range(5):
+        yield from q.enqueue(do_nothing)
+
+    # This suspends workers for working for 2 second
+    yield from suspend(redis, 2)
+
+    # So when this burst of work happens the queue should remain at 5
+    yield from w.work(burst=True, loop=loop)
+    assert (yield from q.count) == 5
+
+    yield from asyncio.sleep(3, loop=loop)
+
+    # The suspension should be expired now, and a burst of work should
+    # now clear the queue
+    yield from w.work(burst=True, loop=loop)
+    assert (yield from q.count) == 0

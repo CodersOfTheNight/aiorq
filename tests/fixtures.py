@@ -95,3 +95,10 @@ def touch_a_mock_after_timeout(timeout):
 
     yield from asyncio.sleep(timeout)
     mock(1)
+
+
+@asyncio.coroutine
+def do_nothing():
+    """The best job in the world."""
+
+    pass
