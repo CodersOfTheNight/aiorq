@@ -239,6 +239,7 @@ class Queue:
         """
 
         timeout = kwargs.pop('timeout', None)
+        description = kwargs.pop('description', None)
         result_ttl = kwargs.pop('result_ttl', None)
         ttl = kwargs.pop('ttl', None)
         depends_on = kwargs.pop('depends_on', None)
@@ -254,7 +255,7 @@ class Queue:
         return (yield from self.enqueue_call(
             func=f, args=args, kwargs=kwargs, timeout=timeout,
             result_ttl=result_ttl, ttl=ttl, job_id=job_id, at_front=at_front,
-            depends_on=depends_on))
+            depends_on=depends_on, description=description))
 
     @asyncio.coroutine
     def enqueue_call(self, func, args=None, kwargs=None, timeout=None,

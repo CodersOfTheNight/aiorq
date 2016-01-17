@@ -345,3 +345,15 @@ def test_prepare_job_execution(redis):
     # Updates worker statuses
     assert worker.get_state() == 'busy'
     assert (yield from worker.get_current_job_id()) == job.id
+
+
+def test_work_unicode_friendly(loop):
+    """Worker processes work with unicode description, then quits."""
+
+    q = Queue('foo')
+    w = Worker([q])
+    job = yield from q.enqueue(
+        'fixtures.say_hello', name='Adam', description='你好 世界!')
+    assert (yield from w.work(burst=True, loop=loop))
+    assert (yield from job.result) == 'Hi there, Adam!'
+    assert job.description == '你好 世界!'
