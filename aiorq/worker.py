@@ -261,7 +261,7 @@ class Worker:
         # finish before shutting down
         if self.get_state() == 'busy':
             self._stop_requested = True
-            logger.debug('Stopping after current horse is finished.  '
+            logger.debug('Stopping after running coroutines are finished.  '
                          'Press Ctrl+C again for a cold shutdown.')
         else:
             raise StopRequested
@@ -376,10 +376,7 @@ class Worker:
 
     @asyncio.coroutine
     def perform_job(self, job, *, loop=None):
-        """Performs the actual work of a job.
-
-        Will/should only be called inside the work horse's process.
-        """
+        """Performs the actual work of a job."""
 
         yield from self.prepare_job_execution(job)
 
