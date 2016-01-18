@@ -440,3 +440,24 @@ def test_worker_sets_death():
     death_date = yield from w.death_date
     assert death_date
     assert type(death_date).__name__ == 'datetime'
+
+
+def test_clean_queue_registries(redis):
+    """Worker.clean_registries sets last_cleaned_at and cleans registries."""
+
+    foo_queue = Queue('foo', connection=redis)
+    foo_registry = StartedJobRegistry('foo', connection=redis)
+    yield from redis.zadd(foo_registry.key, 1, 'foo')
+    assert (yield from redis.zcard(foo_registry.key)) == 1
+
+    bar_queue = Queue('bar', connection=redis)
+    bar_registry = StartedJobRegistry('bar', connection=redis)
+    (yield from redis.zadd(bar_registry.key, 1, 'bar'))
+    assert (yield from redis.zcard(bar_registry.key)) == 1
+
+    worker = Worker([foo_queue, bar_queue])
+    assert not worker.last_cleaned_at
+    yield from worker.clean_registries()
+    assert worker.last_cleaned_at
+    assert not (yield from redis.zcard(foo_registry.key))
+    assert not (yield from redis.zcard(bar_registry.key))
