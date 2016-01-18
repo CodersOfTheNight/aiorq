@@ -1,4 +1,5 @@
 import asyncio
+from datetime import timedelta
 
 from rq.compat import as_text
 from rq.job import JobStatus
@@ -461,3 +462,16 @@ def test_clean_queue_registries(redis):
     assert worker.last_cleaned_at
     assert not (yield from redis.zcard(foo_registry.key))
     assert not (yield from redis.zcard(bar_registry.key))
+
+
+def test_should_run_maintenance_tasks():
+    """Workers should run maintenance tasks on startup and every hour."""
+
+    queue = Queue()
+    worker = Worker(queue)
+    assert worker.should_run_maintenance_tasks
+
+    worker.last_cleaned_at = utcnow()
+    assert not worker.should_run_maintenance_tasks
+    worker.last_cleaned_at = utcnow() - timedelta(seconds=3700)
+    assert worker.should_run_maintenance_tasks
