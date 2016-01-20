@@ -52,7 +52,10 @@ class Worker:
                  default_worker_ttl=None, job_class=None):
         self.connection = resolve_connection(connection)
 
-        queues = [self.queue_class(name=q) if isinstance(q, text_type) else q
+        # TODO: test worker creation without global connection.
+        queues = [self.queue_class(name=q, connection=connection)
+                  if isinstance(q, text_type)
+                  else q
                   for q in ensure_list(queues)]
         self._name = name
         self.queues = queues
