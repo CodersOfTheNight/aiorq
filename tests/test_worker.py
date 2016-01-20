@@ -475,3 +475,15 @@ def test_should_run_maintenance_tasks():
     assert not worker.should_run_maintenance_tasks
     worker.last_cleaned_at = utcnow() - timedelta(seconds=3700)
     assert worker.should_run_maintenance_tasks
+
+
+def test_worker_calls_clean_registries(redis, loop):
+    """Worker calls clean_registries when run."""
+
+    queue = Queue(connection=redis)
+    registry = StartedJobRegistry(connection=redis)
+    yield from redis.zadd(registry.key, 1, 'foo')
+
+    worker = Worker(queue, connection=redis)
+    yield from worker.work(burst=True, loop=loop)
+    assert not (yield from redis.zcard(registry.key))
