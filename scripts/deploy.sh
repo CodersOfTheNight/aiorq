@@ -3,12 +3,12 @@
 # Add deadsnakes mirror.
 
 echo "deb http://ppa.launchpad.net/fkrull/deadsnakes/ubuntu precise main" > /etc/apt/sources.list.d/python.list
-apt-key adv --keyserver keyserver.ubuntu.com --recv-keys DB82666C
+wget --quiet -O - "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0xFF3997E83CD969B409FB24BC5BB92C09DB82666C" | apt-key add -
 
 # Add redis mirror.
 
 echo "deb http://ppa.launchpad.net/chris-lea/redis-server/ubuntu precise main" > /etc/apt/sources.list.d/redis.list
-apt-key adv --keyserver keyserver.ubuntu.com --recv-keys C7917B12
+wget --quiet -O - "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x136221EE520DDFAF0A905689B9316A7BC7917B12" | apt-key add -
 
 # Update mirrors list.
 
