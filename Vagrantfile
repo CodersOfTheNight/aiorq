@@ -8,4 +8,6 @@ Vagrant.configure(2) do |config|
     script.path = "scripts/deploy.sh"
     script.keep_color = true
   end
+
+  config.vm.network "forwarded_port", guest: 9000, host: 9000
 end
