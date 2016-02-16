@@ -16,7 +16,7 @@ apt-get update
 
 # Install redis 3.0.5
 
-apt-get install -y redis-server=3:3.0.6-1chl1~precise1
+apt-get install -y redis-server=3:3.0.7-1chl1~precise1
 
 # Install python 3.4
 
