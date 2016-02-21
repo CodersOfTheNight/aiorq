@@ -4,7 +4,7 @@
 
     This module imports all rq exceptions so you can use it through our api.
 
-    :copyright: (c) 2015 by Artem Malyshev.
+    :copyright: (c) 2015-2016 by Artem Malyshev.
     :license: LGPL-3, see LICENSE for more details.
 """
 # This code was adapted from rq.exceptions module written by Vincent

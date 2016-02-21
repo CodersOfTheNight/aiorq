@@ -4,7 +4,7 @@
 
     asyncio client and server for RQ
 
-    :copyright: (c) 2015 by Artem Malyshev.
+    :copyright: (c) 2015-2016 by Artem Malyshev.
     :license: LGPL-3, see LICENSE for more details.
 """
 # This code was adapted from aiorq module written by Vincent Driessen
