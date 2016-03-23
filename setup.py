@@ -12,7 +12,12 @@ setup(
     author='Artem Malyshev',
     author_email='proofit404@gmail.com',
     packages=find_packages(),
-    install_requires=['rq>=0.5', 'aioredis>=0.2'],
+    install_requires=['rq>=0.5', 'aioredis>=0.2', 'click>=3.0'],
+    entry_points={
+        'console_scripts': [
+            'aiorq = aiorq.cli:main',
+        ],
+    },
     classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
