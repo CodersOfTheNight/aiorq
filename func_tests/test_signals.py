@@ -39,3 +39,20 @@ def test_idle_worker_warm_shutdown():
 
     proc = run_worker()
     assert proc.returncode == 0
+
+
+def test_working_worker_warm_shutdown():
+    """Worker with an ongoing job receiving single SIGTERM signal,
+    allowing job to finish then shutting down.
+
+    """
+
+    with rq.Connection():
+        queue = rq.Queue('foo')
+
+    job = queue.enqueue('fixtures.long_running_job', 1)
+
+    run_worker()
+
+    assert job.is_finished
+    assert 'Done sleeping...' == job.result
