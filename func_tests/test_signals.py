@@ -3,6 +3,23 @@ from signal import SIGTERM
 from subprocess import Popen, PIPE
 from time import sleep
 
+import pytest
+import rq
+
+
+pytestmark = pytest.mark.usefixtures('flush_redis')
+
+
+def run_worker():
+    """Run aiorq worker instance listening the `foo` queue."""
+
+    proc = Popen(['aiorq', 'worker', 'foo'], stdout=PIPE, stderr=PIPE)
+    Thread(target=kill_worker, args=(proc))
+    stdout, stderr = proc.communicate()
+    print(stdout.decode())
+    print(stderr.decode())
+    return proc
+
 
 def kill_worker(process):
     """Wait for the worker to be started over on the main process and kill
@@ -20,9 +37,5 @@ def test_idle_worker_warm_shutdown():
 
     """
 
-    proc = Popen(['aiorq', 'worker', 'foo'], stdout=PIPE, stderr=PIPE)
-    Thread(target=kill_worker, args=(proc))
-    stdout, stderr = proc.communicate()
-    print(stdout.decode())
-    print(stderr.decode())
+    proc = run_worker()
     assert proc.returncode == 0
