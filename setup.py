@@ -15,7 +15,7 @@ setup(
     install_requires=['rq>=0.5', 'aioredis>=0.2', 'click>=3.0'],
     entry_points={
         'console_scripts': [
-            'aiorq = aiorq.cli:main',
+            'aiorq = aiorq.cli:cli',
         ],
     },
     classifiers=[
