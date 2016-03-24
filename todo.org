@@ -2,6 +2,15 @@
   Check CLI utility for shutdown loop correctly.  Use rq as a library
   to check redis state.
 
+* TODO remove worker loop?
+  Is it possible to use ~loop.run_forever()~ instead of
+  ~loop.run_until_complete(worker.work())~?
+
+* TODO shutdown?
+  Should we cancel ~worker.work~ coroutine instead of raising StopRequested?
+
+* TODO loop argument to worker?
+
 * test_worker
   < test_custom_job_class_is_not_global
   < test_custom_queue_class
