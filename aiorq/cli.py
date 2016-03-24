@@ -5,6 +5,7 @@ import click
 
 from .worker import Worker
 
+
 @click.group()
 def cli():
     """aiorq command line tool."""
