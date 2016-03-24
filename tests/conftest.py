@@ -1,10 +1,11 @@
 import sys
-from os.path import dirname, abspath
+from os.path import abspath, dirname, join
 
 import pytest
 from rq.utils import current_timestamp
 
 
+sys.path.append(join(dirname(dirname(abspath(__file__))), 'fixtures'))
 sys.path.append(dirname(abspath(__file__)))
 
 
