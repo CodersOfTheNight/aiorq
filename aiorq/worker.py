@@ -13,7 +13,6 @@
 import asyncio
 import logging
 import os
-import signal
 import socket
 import sys
 import traceback
@@ -23,8 +22,7 @@ from rq.compat import text_type, string_types
 from rq.defaults import DEFAULT_RESULT_TTL, DEFAULT_WORKER_TTL
 from rq.logutils import setup_loghandlers
 from rq.job import JobStatus
-from rq.worker import (WorkerStatus, StopRequested, signal_name,
-                       green, blue, yellow)
+from rq.worker import WorkerStatus, StopRequested, green, blue, yellow
 from rq.utils import (ensure_list, import_attribute, utcformat, utcnow,
                       as_text, utcparse)
 
@@ -224,7 +222,6 @@ class Worker:
         """
 
         setup_loghandlers()
-        self._install_signal_handlers()
 
         did_perform_work = False
         yield from self.register_birth()
@@ -272,23 +269,10 @@ class Worker:
             yield from self.register_death()
         return did_perform_work
 
-    def _install_signal_handlers(self):
-        """Installs signal handlers for handling SIGINT and SIGTERM
-        gracefully.
-        """
-
-        signal.signal(signal.SIGINT, self.request_stop)
-        signal.signal(signal.SIGTERM, self.request_stop)
-
-    def request_stop(self, signum, frame):
+    def request_stop(self):
         """Stops the current worker loop but waits for child processes to end
         gracefully (warm shutdown).
         """
-
-        logger.debug('Got signal %s', signal_name(signum))
-
-        signal.signal(signal.SIGINT, self.request_force_stop)
-        signal.signal(signal.SIGTERM, self.request_force_stop)
 
         logger.warning('Warm shut down requested')
 
