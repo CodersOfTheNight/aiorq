@@ -1,5 +1,4 @@
 from aiorq import Connection, Queue
-from testing import find_connection
 
 
 def test_connection_detection(redis):
@@ -9,11 +8,11 @@ def test_connection_detection(redis):
     assert q.connection == redis
 
 
-def test_connection_stacking(redis, loop):
+def test_connection_stacking(redis, loop, connect):
     """Connection stacking."""
 
-    conn1 = yield from find_connection(loop)
-    conn2 = yield from find_connection(loop)
+    conn1 = yield from connect(loop)
+    conn2 = yield from connect(loop)
 
     with Connection(conn1):
         q1 = Queue()

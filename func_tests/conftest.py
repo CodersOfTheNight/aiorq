@@ -1,4 +1,3 @@
-import os
 import signal
 import subprocess
 import threading
@@ -37,9 +36,9 @@ class Worker:
 
     def start(self):
 
-        self.process = subprocess.Popen(
-            args=self.command, env=self.environment,
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        self.process = subprocess.Popen(args=self.command,
+                                        stdout=subprocess.PIPE,
+                                        stderr=subprocess.PIPE)
         self.is_running = True
 
     def stop_with(self, *signals):
@@ -82,20 +81,6 @@ class Worker:
                 break
         else:
             self.send(signal.SIGKILL, 0)
-
-    @property
-    def environment(self):
-
-        environment = os.environ.copy()
-        environment['PYTHONPATH'] = self.pythonpath
-        return environment
-
-    @property
-    def pythonpath(self):
-
-        return os.path.join(
-            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-            'fixtures')
 
     @property
     def returncode(self):
