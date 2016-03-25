@@ -73,8 +73,14 @@ class Worker:
 
     def kill(self):
 
-        time.sleep(self.kill_after)
-        if self.is_running:
+        sleeping_for = 0
+        while sleeping_for < self.kill_after:
+            time.sleep(self.stop_interval)
+            if self.is_running:
+                sleeping_for += self.stop_interval
+            else:
+                break
+        else:
             self.send(signal.SIGKILL, 0)
 
     @property
