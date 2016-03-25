@@ -11,6 +11,11 @@
 
 * TODO loop argument to worker?
 
+* TODO make fixtures a package and install it into tox environments
+  Avoid python path patching.
+
+* TODO move testing module into tests/conftest.py
+
 * test_worker
   < test_custom_job_class_is_not_global
   < test_custom_queue_class
