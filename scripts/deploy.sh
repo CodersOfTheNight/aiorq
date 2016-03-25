@@ -14,11 +14,11 @@ wget --quiet -O - "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x13622
 
 apt-get update
 
-# Install redis 3.0.5
+# Install redis.
 
 apt-get install -y redis-server=3:3.0.7-1chl1~precise1
 
-# Install python 3.4
+# Install python.
 
 apt-get install -y python3.4 python3.4-dev
 
