@@ -24,7 +24,7 @@ def worker():
 class Worker:
 
     command = ['aiorq', 'worker', 'foo']
-    stop_interval = 0.5
+    stop_interval = 5
     kill_after = 300
 
     def __init__(self):
