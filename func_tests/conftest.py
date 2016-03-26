@@ -23,7 +23,7 @@ def worker():
 
 class Worker:
 
-    command = ['aiorq', 'worker', 'foo']
+    command = ['aiorq', 'worker', 'foo', '--verbose']
     stop_interval = 5
     kill_after = 300
 
