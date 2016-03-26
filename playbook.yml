@@ -1,0 +1,26 @@
+- hosts: all
+  become: yes
+  tasks:
+    - name: add deadsnakes mirror key
+      apt_key: url=https://keyserver.ubuntu.com/pks/lookup?op=get&search=0xFF3997E83CD969B409FB24BC5BB92C09DB82666C
+    - name: add deadsnakes mirror
+      apt_repository: repo='deb http://ppa.launchpad.net/fkrull/deadsnakes/ubuntu precise main'
+    - name: add redis mirror key
+      apt_key: url=https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x136221EE520DDFAF0A905689B9316A7BC7917B12
+    - name: add redis mirror
+      apt_repository: repo='deb http://ppa.launchpad.net/chris-lea/redis-server/ubuntu precise main'
+    - name: install redis
+      apt: name=redis-server=3:3.0.7-1chl1~precise1
+    - name: install python
+      apt: name={{ item }}
+      with_items:
+        - python3.4
+        - python3.4-dev
+    - name: download easy_install
+      get_url: url=https://bootstrap.pypa.io/ez_setup.py dest=/tmp/ez_setup.py
+    - name: install easy_install
+      command: python3.4 ez_setup.py chdir=/tmp
+    - name: install pip
+      easy_install: name=pip
+    - name: install tox
+      pip: name=tox
