@@ -1,4 +1,5 @@
 import asyncio
+import logging
 
 import aioredis
 import click
@@ -15,9 +16,14 @@ def cli():
 
 @cli.command()
 @click.argument('queues', nargs=-1)
-def worker(queues):
+@click.option('--verbose', '-v', 'log_level', flag_value='DEBUG')
+@click.option('--quiet', '-q', 'log_level', flag_value='WARNING')
+def worker(queues, log_level):
     """Starts an aiorq worker."""
 
+    level_name = log_level or 'INFO'
+    level = getattr(logging, level_name)
+    logging.basicConfig(level=level)
     loop = asyncio.get_event_loop()
     loop.run_until_complete(run_worker(queues))
 
