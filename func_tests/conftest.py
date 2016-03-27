@@ -15,10 +15,13 @@ def flush_redis():
     connection.flushdb()
 
 
-@pytest.fixture
+@pytest.yield_fixture
 def worker():
 
-    return Worker()
+    worker = Worker()
+    yield worker
+    worker.kill_after = 0
+    worker.kill()
 
 
 class Worker:
