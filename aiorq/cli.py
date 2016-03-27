@@ -34,7 +34,7 @@ def worker(queues, log_level):
 @asyncio.coroutine
 def run_worker(loop, queues):
     redis = yield from aioredis.create_redis(('localhost', 6379))
-    worker = Worker(queues, connection=redis, loop=loop)
-    loop.add_signal_handler(signal.SIGTERM, worker.request_stop)
+    worker = Worker(queues, connection=redis)
+    loop.add_signal_handler(signal.SIGTERM, worker.request_stop, loop)
     yield from worker.work()
     loop.stop()

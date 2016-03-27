@@ -47,7 +47,7 @@ class Worker:
 
     def __init__(self, queues, name=None, default_result_ttl=None,
                  connection=None, exception_handlers=None,
-                 default_worker_ttl=None, job_class=None, *, loop=None):
+                 default_worker_ttl=None, job_class=None):
         self.connection = resolve_connection(connection)
 
         # TODO: test worker creation without global connection.
@@ -87,8 +87,6 @@ class Worker:
             if isinstance(job_class, string_types):
                 job_class = import_attribute(job_class)
             self.job_class = job_class
-
-        self.loop = loop
 
     def validate_queues(self):
         """Sanity check for the given queues."""
@@ -270,19 +268,19 @@ class Worker:
             yield from self.register_death()
         return did_perform_work
 
-    def request_force_stop(self):
+    def request_force_stop(self, loop):
         """Terminates the application (cold shutdown)."""
 
         logger.warning('Cold shut down')
-        self.loop.stop()
+        loop.stop()
 
-    def request_stop(self):
+    def request_stop(self, loop):
         """Stops the current worker loop but waits for coroutines to end
         gracefully (warm shutdown).
         """
 
         logger.warning('Warm shut down requested')
-        self.loop.add_signal_handler(signal.SIGTERM, self.request_force_stop)
+        loop.add_signal_handler(signal.SIGTERM, self.request_force_stop, loop)
 
         # If shutdown is requested in the middle of a job, wait until
         # finish before shutting down
@@ -291,7 +289,7 @@ class Worker:
             logger.debug('Stopping after running coroutines are finished.  '
                          'Press Ctrl+C again for a cold shutdown.')
         else:
-            self.loop.stop()
+            loop.stop()
 
     def queue_names(self):
         """Returns the queue names of this worker's queues."""

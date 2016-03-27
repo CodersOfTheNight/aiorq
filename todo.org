@@ -1,7 +1,5 @@
 * TODO purge StopRequested exception
 
-* TODO test all situations ~worker.loop is None~
-
 * TODO concurrent job execution with ensure_future
 
 * TODO python 3.5 async/await syntax support
