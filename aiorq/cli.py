@@ -5,6 +5,7 @@ import signal
 import aioredis
 import click
 
+from .compat import ensure_future
 from .worker import Worker
 
 
@@ -26,7 +27,7 @@ def worker(queues, log_level):
     level = getattr(logging, level_name)
     logging.basicConfig(level=level)
     loop = asyncio.get_event_loop()
-    asyncio.ensure_future(run_worker(loop, queues), loop=loop)
+    ensure_future(run_worker(loop, queues), loop=loop)
     loop.run_forever()
     loop.close()
 
