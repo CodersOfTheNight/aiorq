@@ -1,15 +1,18 @@
-* TODO integration tests
-  Check CLI utility for shutdown loop correctly.  Use rq as a library
-  to check redis state.
+* TODO purge StopRequested exception
 
-* TODO remove worker loop?
-  Is it possible to use ~loop.run_forever()~ instead of
-  ~loop.run_until_complete(worker.work())~?
+* TODO test all situations ~worker.loop is None~
 
-* TODO shutdown?
-  Should we cancel ~worker.work~ coroutine instead of raising StopRequested?
+* TODO concurrent job execution with ensure_future
 
-* TODO loop argument to worker?
+* TODO python 3.5 async/await syntax support
+  - async for job in Queue
+
+* TODO subscribing for registries
+
+* TODO yield from job.wait_result
+  It must return after:
+  - worker process done this task
+  - task was failed
 
 * test_worker
   < test_custom_job_class_is_not_global
@@ -37,3 +40,11 @@
 * test_registry
   < test_cleanup
   > test_finished_cleanup
+
+* redis bluster support
+
+* is it necessary to use connection pool?
+
+* ETA
+
+* rate limit
