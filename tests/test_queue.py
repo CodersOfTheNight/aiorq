@@ -75,7 +75,7 @@ def test_empty_queue(redis):
     assert (yield from redis.lpop('rq:queue:example')) is None
 
 
-def test_empty_remove_jobs(redis):
+def test_empty_removes_jobs(redis):
     """Emptying a queue deletes the associated job objects."""
 
     q = Queue('example')

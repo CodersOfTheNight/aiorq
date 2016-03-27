@@ -504,7 +504,7 @@ def test_requeue_job(redis):
     assert (yield from get_failed_queue().is_empty())
 
 
-def test_job_status_():
+def test_job_status():
     """Access job status checkers like is_started."""
 
     job = Job()
