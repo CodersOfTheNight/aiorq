@@ -37,3 +37,4 @@ def run_worker(loop, queues):
     worker = Worker(queues, connection=redis, loop=loop)
     loop.add_signal_handler(signal.SIGTERM, worker.request_stop)
     yield from worker.work()
+    loop.stop()
