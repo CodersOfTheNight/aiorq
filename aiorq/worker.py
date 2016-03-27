@@ -130,8 +130,9 @@ class Worker:
         """Registers its own birth."""
 
         logger.debug('Registering birth of worker {0}'.format(self.name))
-        if (yield from self.connection.exists(self.key)) and \
-                not (yield from self.connection.hexists(self.key, 'death')):
+        another_is_present = yield from self.connection.exists(self.key)
+        another_is_dead = yield from self.connection.hexists(self.key, 'death')
+        if another_is_present and not another_is_dead:
             msg = 'There exists an active worker named {0!r} already'
             raise ValueError(msg.format(self.name))
         key = self.key
