@@ -26,6 +26,7 @@ from rq.worker import WorkerStatus, green, blue, yellow
 from rq.utils import (ensure_list, import_attribute, utcformat, utcnow,
                       as_text, utcparse)
 
+from .compat import ensure_future
 from .connections import resolve_connection
 from .exceptions import DequeueTimeout, JobTimeoutException
 from .job import Job
@@ -254,12 +255,9 @@ class Worker:
                     break  # TODO: do we need to use break for burst mode only?
 
                 job, queue = result
-                yield from self.execute_job(job, loop=loop)
-                yield from self.heartbeat()
+                ensure_future(self.execute_job(job, loop=loop))
 
-                if (yield from job.get_status()) == JobStatus.FINISHED:
-                    yield from queue.enqueue_dependents(job)
-
+                # TODO: should be set after first coroutine ends
                 did_perform_work = True
 
         finally:
@@ -395,7 +393,12 @@ class Worker:
 
         yield from self.set_state('busy')
         yield from self.perform_job(job, loop=loop)
+        # TODO: set this status only if there are no running coroutines
         yield from self.set_state('idle')
+        yield from self.heartbeat()
+
+        if (yield from job.get_status()) == JobStatus.FINISHED:
+            yield from queue.enqueue_dependents(job)
 
     @asyncio.coroutine
     def perform_job(self, job, *, loop=None):
