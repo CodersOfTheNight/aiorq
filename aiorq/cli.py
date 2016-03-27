@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import signal
 
 import aioredis
 import click
@@ -25,11 +26,14 @@ def worker(queues, log_level):
     level = getattr(logging, level_name)
     logging.basicConfig(level=level)
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(run_worker(queues))
+    asyncio.ensure_future(run_worker(loop, queues), loop=loop)
+    loop.run_forever()
+    loop.close()
 
 
 @asyncio.coroutine
-def run_worker(queues):
+def run_worker(loop, queues):
     redis = yield from aioredis.create_redis(('localhost', 6379))
-    worker = Worker(queues, connection=redis)
+    worker = Worker(queues, connection=redis, loop=loop)
+    loop.add_signal_handler(signal.SIGTERM, worker.request_stop)
     yield from worker.work()
