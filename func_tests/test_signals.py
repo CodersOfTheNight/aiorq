@@ -30,6 +30,7 @@ def test_working_worker_warm_shutdown(worker):
 
     worker.stop_with(SIGTERM)
 
+    assert worker.returncode == 0
     assert job.is_finished
     assert 'Done sleeping...' == job.result
 
@@ -47,4 +48,5 @@ def test_working_worker_cold_shutdown(worker):
 
     worker.stop_with(SIGTERM, SIGTERM)
 
+    assert worker.returncode == 0
     assert not job.is_finished
