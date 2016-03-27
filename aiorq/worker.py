@@ -22,7 +22,7 @@ from datetime import timedelta
 from rq.compat import text_type, string_types
 from rq.defaults import DEFAULT_RESULT_TTL, DEFAULT_WORKER_TTL
 from rq.job import JobStatus
-from rq.worker import WorkerStatus, StopRequested, green, blue, yellow
+from rq.worker import WorkerStatus, green, blue, yellow
 from rq.utils import (ensure_list, import_attribute, utcformat, utcnow,
                       as_text, utcparse)
 
@@ -199,7 +199,7 @@ class Worker:
                 logger.info('Suspended in burst mode, exiting')
                 logger.info(
                     'Note: There could still be unfinished jobs on the queue')
-                raise StopRequested
+                return True
 
             if not notified:
                 logger.info('Worker suspended, run `rq resume` to resume')
@@ -229,31 +229,29 @@ class Worker:
 
         try:
             while True:
-                try:
-                    yield from self.check_for_suspension(burst, loop=loop)
-
-                    if self.should_run_maintenance_tasks:
-                        yield from self.clean_registries()
-
-                    if self._stop_requested:
-                        logger.info('Stopping on request')
-                        break
-
-                    if burst:
-                        timeout = None
-                    else:
-                        timeout = max(1, self.default_worker_ttl - 60)
-
-                    result = yield from self.dequeue_job_and_maintain_ttl(
-                        timeout)
-
-                    if result is None:
-                        if burst:
-                            logger.info(
-                                'RQ worker %s done, quitting', self.key)
-                        break
-                except StopRequested:
+                if (yield from self.check_for_suspension(burst, loop=loop)):
                     break
+
+                if self.should_run_maintenance_tasks:
+                    yield from self.clean_registries()
+
+                if self._stop_requested:
+                    logger.info('Stopping on request')
+                    break
+
+                if burst:
+                    timeout = None
+                else:
+                    timeout = max(1, self.default_worker_ttl - 60)
+
+                result = yield from self.dequeue_job_and_maintain_ttl(
+                    timeout)
+
+                if result is None:
+                    if burst:
+                        logger.info(
+                            'RQ worker %s done, quitting', self.key)
+                    break  # TODO: do we need to use break for burst mode only?
 
                 job, queue = result
                 yield from self.execute_job(job, loop=loop)

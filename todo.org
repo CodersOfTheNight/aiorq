@@ -1,5 +1,3 @@
-* TODO purge StopRequested exception
-
 * TODO concurrent job execution with ensure_future
 
 * TODO python 3.5 async/await syntax support
