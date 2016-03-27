@@ -21,7 +21,6 @@ from datetime import timedelta
 
 from rq.compat import text_type, string_types
 from rq.defaults import DEFAULT_RESULT_TTL, DEFAULT_WORKER_TTL
-from rq.logutils import setup_loghandlers
 from rq.job import JobStatus
 from rq.worker import WorkerStatus, StopRequested, green, blue, yellow
 from rq.utils import (ensure_list, import_attribute, utcformat, utcnow,
@@ -224,8 +223,6 @@ class Worker:
 
         The return value indicates whether any jobs were processed.
         """
-
-        setup_loghandlers()
 
         did_perform_work = False
         yield from self.register_birth()
