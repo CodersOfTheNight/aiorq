@@ -1,41 +1,14 @@
-* TODO concurrent job execution with ensure_future
+* concurrent job execution with ensure_future
 
-* TODO python 3.5 async/await syntax support
+* python 3.5 async/await syntax support
   - async for job in Queue
 
-* TODO subscribing for registries
+* subscribing for registries
 
-* TODO yield from job.wait_result
+* yield from job.wait_result
   It must return after:
   - worker process done this task
   - task was failed
-
-* test_worker
-  < test_custom_job_class_is_not_global
-  < test_custom_queue_class
-  < test_custom_queue_class_is_not_global
-  < test_idle_worker_warm_shutdown
-  < test_working_worker_cold_shutdown
-  < test_working_worker_warm_shutdown
-  < test_work_via_simpleworker
-
-* test_connection
-  < test_connection_pass_thru
-
-* test_decorator
-  < test_decorator_accepts_ttl_as_argument
-
-* test_job
-  > test_backward_compatibility_properties_are_broken
-  > test_cancel_job
-  < test_job_access_within_synchronous_job_function
-  < test_job_async_status_finished
-  > test_job_status_
-  > test_requeue_job
-
-* test_registry
-  < test_cleanup
-  > test_finished_cleanup
 
 * redis bluster support
 
