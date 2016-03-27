@@ -210,7 +210,9 @@ class Job(SynchronousJob):
         if len(obj) == 0:
             raise NoSuchJobError('No such job: {0}'.format(key))
 
-        to_date = lambda text: utcparse(as_text(text)) if text else None
+        def to_date(text):
+            if text:
+                return utcparse(as_text(text))
 
         try:
             self.data = obj['data']

@@ -2,6 +2,7 @@ import asyncio
 
 import aiohttp
 
+
 @asyncio.coroutine
 def fetch_page(url):
     print('Start request.')
