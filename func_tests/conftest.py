@@ -83,7 +83,10 @@ class Worker:
             else:
                 break
         else:
-            self.send(signal.SIGKILL, 0)
+            try:
+                self.send(signal.SIGKILL, 0)
+            except ProcessLookupError:
+                pass
 
     @property
     def returncode(self):
