@@ -255,7 +255,7 @@ class Worker:
                     break  # TODO: do we need to use break for burst mode only?
 
                 job, queue = result
-                ensure_future(self.execute_job(job, loop=loop))
+                ensure_future(self.execute_job(job, loop=loop), loop=loop)
 
                 # TODO: should be set after first coroutine ends
                 did_perform_work = True
