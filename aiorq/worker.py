@@ -438,6 +438,11 @@ class Worker:
             yield from pipe.execute()
 
         except Exception:
+            # TODO: if `pipe.execute()` throws exception
+            # `ConnectionClosedError` and we try to add actions to the
+            # pipeline which was already executed then line below will
+            # throw "AssertionError: Pipeline already executed. Create
+            # new one."
             yield from job.set_status(JobStatus.FAILED, pipeline=pipe)
             yield from started_job_registry.remove(job, pipeline=pipe)
             yield from self.set_current_job_id(None, pipeline=pipe)
