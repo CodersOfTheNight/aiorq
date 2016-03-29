@@ -255,7 +255,8 @@ class Worker:
                     break  # TODO: do we need to use break for burst mode only?
 
                 job, queue = result
-                ensure_future(self.execute_job(job, loop=loop), loop=loop)
+                job_coroutine = self.execute_job(job, queue, loop=loop)
+                ensure_future(job_coroutine, loop=loop)
 
                 # TODO: should be set after first coroutine ends
                 did_perform_work = True
@@ -388,7 +389,7 @@ class Worker:
             yield from coroutine
 
     @asyncio.coroutine
-    def execute_job(self, job, *, loop=None):
+    def execute_job(self, job, queue, *, loop=None):
         """Send a job into asyncio event loop."""
 
         yield from self.set_state('busy')
