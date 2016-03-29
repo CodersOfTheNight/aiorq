@@ -14,9 +14,18 @@ and pass it into Queue constructor.  We need started event loop for
 this task so Queue's creation is possible only inside running
 coroutines.  Then simply put job into queue.
 
-.. literalinclude:: ../examples/enqueueing.py
-    :language: python
-    :lines: 9-18
+.. block:: python
+
+    @asyncio.coroutine
+    def go():
+        redis = yield from create_redis(('localhost', 6379))
+        queue = Queue('my_queue', connection=redis)
+        job = yield from queue.enqueue(mylib.add, 1, 2)
+        yield from asyncio.sleep(0.2)
+        result = yield from job.result
+        assert result == 3, '{!r} is not equal 3'.format(result)
+        print('Well done, Turner!')
+        redis.close()
 
 Start old good rq worker with familiar command.
 
@@ -32,13 +41,25 @@ The ``@job`` decorator
 
 You can also use Celery-style decorated tasks.
 
-.. literalinclude:: ../examples/mylib.py
-    :language: python
-    :lines: 10-13
+.. code:: python
 
-.. literalinclude:: ../examples/job_decorator.py
-    :language: python
-    :lines: 9-18
+    @job('my_queue')
+    def summator(*args):
+
+        return add(*args)
+
+.. code:: python
+
+    @asyncio.coroutine
+    def go():
+        redis = yield from create_redis(('localhost', 6379))
+        push_connection(redis)
+        job = yield from mylib.summator.delay(1, 2)
+        yield from asyncio.sleep(0.2)
+        result = yield from job.result
+        assert result == 3, '{!r} is not equal 3'.format(result)
+        print('Well done, Turner!')
+        redis.close()
 
 Job dependencies
 ----------------
@@ -46,14 +67,25 @@ Job dependencies
 To execute a job that depends on another job, use the ``depends_on``
 argument.
 
-.. literalinclude:: ../examples/mylib.py
-    :language: python
-    :lines: 2-3,16-22
+.. code:: python
 
-.. literalinclude:: ../examples/dependencies.py
-    :language: python
-    :lines: 12-16
-    :dedent: 4
+    from rq import Connection, Queue
+
+    def job_summator(id1, id2):
+
+        with Connection():
+            job1 = Queue().fetch_job(id1)
+            job2 = Queue().fetch_job(id2)
+
+        return add(job1.result, job2.result)
+
+.. code:: python
+
+    queue = Queue('my_queue', connection=redis)
+    job1 = yield from queue.enqueue(mylib.add, 1, 2)
+    job2 = yield from queue.enqueue(mylib.add, 1, 2, depends_on=job1)
+    job3 = yield from queue.enqueue(mylib.job_summator, job1.id, job2.id,
+                                    depends_on=job2)
 
 In the example above we use ``rq.Job`` to fetch result.  The reason we
 do that is synchronous worker provided by RQ package.  Call to
