@@ -1,4 +1,3 @@
-from signal import SIGTERM
 from time import sleep
 
 import pytest
