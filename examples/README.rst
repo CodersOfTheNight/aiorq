@@ -27,4 +27,4 @@ Schedule some tasks
 
 .. code:: bash
 
-    python -m enqueue_coroutine
+    python -m run_example
