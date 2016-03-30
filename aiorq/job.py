@@ -316,12 +316,17 @@ class Job(SynchronousJob):
     def perform(self):
         """Invokes the job function with the job arguments."""
 
+        # TODO: fucked up `Worker.perform_job` pipeline if there was a
+        # empty result TTL.
         yield from self.connection.persist(self.key)
         self.ttl = -1
         _job_stack.push(self.id)
         try:
             self._result = yield from self.func(*self.args, **self.kwargs)
         finally:
+              # TODO: maybe fucked up since coroutines executed in one
+              # thread simultaneously.  If short coroutine scheduled
+              # later finishes earlier then we will be in the trouble.
             assert self.id == _job_stack.pop()
         return self._result
 
