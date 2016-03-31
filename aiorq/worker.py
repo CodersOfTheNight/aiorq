@@ -224,6 +224,7 @@ class Worker:
         """
 
         did_perform_work = False
+        jobs = set()
         yield from self.register_birth()
         logger.info("RQ worker %s started", self.key)
         yield from self.set_state(WorkerStatus.STARTED)
@@ -252,11 +253,14 @@ class Worker:
                     if burst:
                         logger.info(
                             'RQ worker %s done, quitting', self.key)
+                        if jobs:
+                            yield from asyncio.gather(*jobs)
                     break  # TODO: do we need to use break for burst mode only?
 
                 job, queue = result
                 job_coroutine = self.execute_job(job, queue, loop=loop)
-                ensure_future(job_coroutine, loop=loop)
+                # TODO: remove this task from set when it will be finished
+                jobs.add(ensure_future(job_coroutine, loop=loop))
 
                 # TODO: should be set after first coroutine ends
                 did_perform_work = True
