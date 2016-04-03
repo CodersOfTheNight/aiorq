@@ -51,6 +51,7 @@ class Worker:
                  default_worker_ttl=None, job_class=None):
         self.connection = resolve_connection(connection)
 
+        # TODO: assert against empty queues.
         # TODO: test worker creation without global connection.
         queues = [self.queue_class(name=q, connection=connection)
                   if isinstance(q, text_type)
