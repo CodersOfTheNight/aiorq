@@ -33,6 +33,7 @@ from .job import Job
 from .queue import Queue, get_failed_queue
 from .registry import clean_registries, StartedJobRegistry, FinishedJobRegistry
 from .suspension import is_suspended
+from .utils import pipelined_method
 
 
 logger = logging.getLogger(__name__)
@@ -178,14 +179,11 @@ class Worker:
     def get_state(self):
         return self._state
 
-    @asyncio.coroutine
-    def set_state(self, state, pipeline=None):
+    @pipelined_method
+    def set_state(self, state, pipeline):
 
         self._state = state
-        pipe = pipeline if pipeline else self.connection
-        coroutine = pipe.hset(self.key, 'state', state)
-        if not pipeline:
-            yield from coroutine
+        pipeline.hset(self.key, 'state', state)
 
     @asyncio.coroutine
     def check_for_suspension(self, burst, *, loop=None):
@@ -372,8 +370,8 @@ class Worker:
         yield from self.heartbeat()
         return result
 
-    @asyncio.coroutine
-    def heartbeat(self, timeout=0, pipeline=None):
+    @pipelined_method
+    def heartbeat(self, pipeline, timeout=0):
         """Specifies a new worker timeout, typically by extending the
         expiration time of the worker, effectively making this a
         "heartbeat" to not expire the worker until the timeout passes.
@@ -386,12 +384,9 @@ class Worker:
         """
 
         timeout = max(timeout, self.default_worker_ttl)
-        pipe = pipeline if pipeline else self.connection
         logger.debug('Sent heartbeat to prevent worker timeout.  '
                      'Next one should arrive within %s seconds.', timeout)
-        coroutine = pipe.expire(self.key, timeout)
-        if not pipeline:
-            yield from coroutine
+        pipeline.expire(self.key, timeout)
 
     @asyncio.coroutine
     def execute_job(self, job, queue, *, loop=None):
@@ -486,33 +481,27 @@ class Worker:
         pipe = self.connection.multi_exec()
         yield from self.set_state(WorkerStatus.BUSY, pipeline=pipe)
         yield from self.set_current_job_id(job.id, pipeline=pipe)
-        yield from self.heartbeat(timeout, pipeline=pipe)
+        yield from self.heartbeat(pipeline=pipe, timeout=timeout)
         registry = StartedJobRegistry(job.origin, self.connection)
         yield from registry.add(job, timeout, pipeline=pipe)
         yield from job.set_status(JobStatus.STARTED, pipeline=pipe)
         pipe.hset(job.key, 'started_at', utcformat(utcnow()))
         yield from pipe.execute()
 
-    @asyncio.coroutine
-    def set_current_job_id(self, job_id, pipeline=None):
-
-        pipe = pipeline if pipeline else self.connection
+    @pipelined_method
+    def set_current_job_id(self, job_id, pipeline):
 
         if job_id is None:
-            coroutine = pipe.hdel(self.key, 'current_job')
+            pipeline.hdel(self.key, 'current_job')
         else:
-            coroutine = pipe.hset(self.key, 'current_job', job_id)
+            pipeline.hset(self.key, 'current_job', job_id)
 
-        if not pipeline:
-            yield from coroutine
+    @pipelined_method
+    def get_current_job_id(self, pipeline):
 
-    @asyncio.coroutine
-    def get_current_job_id(self, pipeline=None):
-
-        connection = pipeline if pipeline else self.connection
-        coroutine = connection.hget(self.key, 'current_job')
-        if not pipeline:
-            return as_text((yield from coroutine))
+        # TODO: we can't store current job id in the worker attribute
+        # since we execute multiple jobs simultaneously.
+        pipeline.hget(self.key, 'current_job')
 
     @asyncio.coroutine
     def get_current_job(self):
