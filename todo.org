@@ -1,5 +1,10 @@
 * concurrent job execution with ensure_future
 
+* use connection pool
+  Concurrent job execution blocked by single redis connection.
+
+* use task local variables instead of rq.local module
+
 * python 3.5 async/await syntax support
   - async for job in Queue
 
@@ -12,8 +17,6 @@
 
 * redis bluster support
 
-* is it necessary to use connection pool?
-
-* ETA
+* eta
 
 * rate limit
