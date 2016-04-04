@@ -29,3 +29,31 @@ def pipelined_method(f):
             yield from pipe.execute()
 
     return wrapper
+
+
+def pipeline_method(method):
+    """Decorates method with access to current `asyncio.Task` pipeline."""
+
+    @asyncio.coroutine
+    @functools.wraps(method)
+    def wrapper(self, *args, **kwargs):
+
+        current_task = asyncio.Task.current_task(loop=self.loop)
+        pipeline = self.connection.pipeline()
+        current_task.pipeline = pipeline
+        try:
+            method(self, *args, **kwargs)
+        finally:
+            del current_task.pipeline  # TODO: test me
+        yield from pipeline.execute()
+
+    return wrapper
+
+
+@property
+def pipeline_property(self):
+    """Current `asyncio.Task` pipeline property."""
+
+    current_task = asyncio.Task.current_task(loop=self.loop)
+    # TODO: test attribute error
+    return current_task.pipeline
