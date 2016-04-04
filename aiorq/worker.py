@@ -496,12 +496,10 @@ class Worker:
         else:
             pipeline.hset(self.key, 'current_job', job_id)
 
-    @pipelined_method
-    def get_current_job_id(self, pipeline):
+    @asyncio.coroutine
+    def get_current_job_id(self):
 
-        # TODO: we can't store current job id in the worker attribute
-        # since we execute multiple jobs simultaneously.
-        pipeline.hget(self.key, 'current_job')
+        return as_text((yield from self.connection.hget(self.key, 'current_job')))
 
     @asyncio.coroutine
     def get_current_job(self):
