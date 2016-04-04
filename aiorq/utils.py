@@ -9,7 +9,10 @@
 """
 
 import asyncio
+import contextlib
 import functools
+
+from .exceptions import PipelineError
 
 
 def pipelined_method(f):
@@ -38,16 +41,38 @@ def pipeline_method(method):
     @functools.wraps(method)
     def wrapper(self, *args, **kwargs):
 
-        current_task = asyncio.Task.current_task(loop=self.loop)
-        pipeline = self.connection.pipeline()
-        current_task.pipeline = pipeline
-        try:
+        if pipeline_bound(self):
             method(self, *args, **kwargs)
-        finally:
-            del current_task.pipeline  # TODO: test me
-        yield from pipeline.execute()
+        else:
+            pipeline = self.connection.pipeline()
+            with Pipeline(pipeline, loop=self.loop):
+                method(self, *args, **kwargs)
+            yield from pipeline.execute()
 
     return wrapper
+
+
+@contextlib.contextmanager
+def Pipeline(pipeline, *, loop=None):
+    """Bind pipeline for current `asyncio.Task`."""
+
+    current_task = asyncio.Task.current_task(loop=loop)
+    current_task.pipeline = pipeline
+    try:
+        yield
+    finally:
+        del current_task.pipeline
+
+
+def pipeline_bound(obj):
+    """Check if there is pipeline binding for this object."""
+
+    try:
+        obj.pipeline
+    except PipelineError:
+        return False
+    else:
+        return True
 
 
 @property
@@ -55,5 +80,8 @@ def pipeline_property(self):
     """Current `asyncio.Task` pipeline property."""
 
     current_task = asyncio.Task.current_task(loop=self.loop)
-    # TODO: test attribute error
-    return current_task.pipeline
+    try:
+        current_pipeline = current_task.pipeline
+    except AttributeError:
+        raise PipelineError
+    return current_pipeline
