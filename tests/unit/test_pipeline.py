@@ -4,7 +4,7 @@ import pytest
 
 from aiorq.connections import resolve_connection
 from aiorq.exceptions import PipelineError
-from aiorq.utils import pipeline_method, pipeline_property, Pipeline
+from aiorq.pipeline import pipeline_method, pipeline_property, Pipeline
 
 
 def test_execute_each_method_without_pipeline(loop, redis):
