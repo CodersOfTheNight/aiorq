@@ -30,10 +30,10 @@ from .compat import ensure_future
 from .connections import resolve_connection
 from .exceptions import DequeueTimeout, JobTimeoutException
 from .job import Job
+from .pipeline import pipeline_method, pipeline_property
 from .queue import Queue, get_failed_queue
 from .registry import clean_registries, StartedJobRegistry, FinishedJobRegistry
 from .suspension import is_suspended
-from .utils import pipelined_method
 
 
 logger = logging.getLogger(__name__)
@@ -46,6 +46,8 @@ class Worker:
     redis_workers_keys = 'rq:workers'
     queue_class = Queue
     job_class = Job
+
+    pipeline = pipeline_property
 
     def __init__(self, queues, name=None, default_result_ttl=None,
                  connection=None, exception_handlers=None,
@@ -179,11 +181,11 @@ class Worker:
     def get_state(self):
         return self._state
 
-    @pipelined_method
-    def set_state(self, state, pipeline):
+    @pipeline_method
+    def set_state(self, state):
 
         self._state = state
-        pipeline.hset(self.key, 'state', state)
+        self.pipeline.hset(self.key, 'state', state)
 
     @asyncio.coroutine
     def check_for_suspension(self, burst, *, loop=None):
@@ -370,8 +372,8 @@ class Worker:
         yield from self.heartbeat()
         return result
 
-    @pipelined_method
-    def heartbeat(self, pipeline, timeout=0):
+    @pipeline_method
+    def heartbeat(self, timeout=0):
         """Specifies a new worker timeout, typically by extending the
         expiration time of the worker, effectively making this a
         "heartbeat" to not expire the worker until the timeout passes.
@@ -386,7 +388,7 @@ class Worker:
         timeout = max(timeout, self.default_worker_ttl)
         logger.debug('Sent heartbeat to prevent worker timeout.  '
                      'Next one should arrive within %s seconds.', timeout)
-        pipeline.expire(self.key, timeout)
+        self.pipeline.expire(self.key, timeout)
 
     @asyncio.coroutine
     def execute_job(self, job, queue, *, loop=None):
@@ -488,13 +490,13 @@ class Worker:
         pipe.hset(job.key, 'started_at', utcformat(utcnow()))
         yield from pipe.execute()
 
-    @pipelined_method
-    def set_current_job_id(self, job_id, pipeline):
+    @pipeline_method
+    def set_current_job_id(self, job_id):
 
         if job_id is None:
-            pipeline.hdel(self.key, 'current_job')
+            self.pipeline.hdel(self.key, 'current_job')
         else:
-            pipeline.hset(self.key, 'current_job', job_id)
+            self.pipeline.hset(self.key, 'current_job', job_id)
 
     @asyncio.coroutine
     def get_current_job_id(self):
