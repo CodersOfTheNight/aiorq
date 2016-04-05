@@ -74,12 +74,12 @@ def test_cleanup(redis, registry):
     assert (yield from job.get_status()) == JobStatus.FAILED
 
 
-def test_job_execution(loop, redis, registry):
+def test_job_execution(redis, registry):
     """Job is removed from StartedJobRegistry after execution."""
 
     # We need synchronous jobs for synchronous workers
     queue = Queue()
-    worker = Worker(queue, loop=loop)
+    worker = Worker(queue)
 
     job = yield from queue.enqueue(say_hello)
 
@@ -138,11 +138,11 @@ def test_jobs_are_put_in_registry(loop):
 
     # We need synchronous jobs for synchronous workers
     queue = Queue()
-    worker = Worker(queue, loop=loop)
+    worker = Worker(queue)
 
     # Completed jobs are put in FinishedJobRegistry
     job = yield from queue.enqueue(say_hello)
-    yield from worker.perform_job(job)
+    yield from worker.perform_job(job, loop=loop)
     assert (yield from registry.get_job_ids()) == [job.id]
 
     # Failed jobs are not put in FinishedJobRegistry
