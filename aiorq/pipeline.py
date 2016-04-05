@@ -90,7 +90,3 @@ def pipeline_property(self):
     except AttributeError:
         raise PipelineError
     return current_pipeline
-
-
-# TODO: Pipeline nesting.
-# TODO: Pipeline factory argument, execute it at exit.

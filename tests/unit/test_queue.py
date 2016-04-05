@@ -8,21 +8,21 @@ from aiorq.registry import DeferredJobRegistry
 from fixtures import say_hello, Number, echo, div_by_zero
 
 
-def test_create_queue(set_loop):
+def test_create_queue():
     """We can create queue instance."""
 
     q = Queue()
     assert q.name == 'default'
 
 
-def test_create_named_queue(set_loop):
+def test_create_named_queue():
     """We can create named queue instance."""
 
     q = Queue('my-queue')
     assert q.name == 'my-queue'
 
 
-def test_queue_magic_methods(set_loop):
+def test_queue_magic_methods():
     """Test simple magic method behavior of the Queue class."""
 
     q = Queue()
@@ -31,7 +31,7 @@ def test_queue_magic_methods(set_loop):
     assert repr(q) == "Queue('default')"
 
 
-def test_custom_job_class(set_loop):
+def test_custom_job_class():
     """Ensure custom job class assignment works as expected."""
 
     class CustomJob(Job):
@@ -41,7 +41,7 @@ def test_custom_job_class(set_loop):
     assert q.job_class == CustomJob
 
 
-def test_equality(set_loop):
+def test_equality():
     """Mathematical equality of queues."""
 
     q1 = Queue('foo')
@@ -53,7 +53,7 @@ def test_equality(set_loop):
     assert q2 != q3
 
 
-def test_queue_order(set_loop):
+def test_queue_order():
     """Mathematical order of queues."""
 
     q1 = Queue('a')
@@ -63,10 +63,10 @@ def test_queue_order(set_loop):
     assert q3 > q2
 
 
-def test_empty_queue(loop, redis):
+def test_empty_queue(redis):
     """Emptying queues."""
 
-    q = Queue('example', connection=redis, loop=loop)
+    q = Queue('example', connection=redis)
     yield from redis.rpush('rq:queue:example', 'foo')
     yield from redis.rpush('rq:queue:example', 'bar')
     assert not (yield from q.is_empty())
@@ -75,26 +75,26 @@ def test_empty_queue(loop, redis):
     assert (yield from redis.lpop('rq:queue:example')) is None
 
 
-def test_empty_removes_jobs(loop, redis):
+def test_empty_removes_jobs(redis):
     """Emptying a queue deletes the associated job objects."""
 
-    q = Queue('example', loop=loop)
+    q = Queue('example')
     job = yield from q.enqueue(lambda x: x)
     assert (yield from Job.exists(job.id))
     yield from q.empty()
     assert not (yield from Job.exists(job.id))
 
 
-def test_queue_is_empty(loop, redis):
+def test_queue_is_empty(redis):
     """Detecting empty queues."""
 
-    q = Queue('example', loop=loop)
+    q = Queue('example')
     assert (yield from q.is_empty())
     yield from redis.rpush('rq:queue:example', 'sentinel message')
     assert not (yield from q.is_empty())
 
 
-def test_remove(set_loop):
+def test_remove():
     """Ensure queue.remove properly removes Job from queue."""
 
     q = Queue('example')
@@ -109,7 +109,7 @@ def test_remove(set_loop):
     assert job.id not in (yield from q.job_ids)
 
 
-def test_jobs(set_loop):
+def test_jobs():
     """Getting jobs out of a queue."""
 
     q = Queue('example')
@@ -122,10 +122,10 @@ def test_jobs(set_loop):
     assert not (yield from q.job_ids)
 
 
-def test_compact(loop, redis):
+def test_compact(redis):
     """Queue.compact() removes non-existing jobs."""
 
-    q = Queue(loop=loop)
+    q = Queue()
 
     yield from q.enqueue(say_hello, 'Alice')
     yield from q.enqueue(say_hello, 'Charlie')
@@ -139,10 +139,10 @@ def test_compact(loop, redis):
         len(q)
 
 
-def test_enqueue(loop, redis):
+def test_enqueue(redis):
     """Enqueueing job onto queues."""
 
-    q = Queue(loop=loop)
+    q = Queue()
     assert (yield from q.is_empty())
 
     # say_hello spec holds which queue this is sent to
@@ -156,7 +156,7 @@ def test_enqueue(loop, redis):
     assert job_id == (yield from redis.lrange(q_key, 0, -1))[0].decode('ascii')
 
 
-def test_enqueue_sets_metadata(set_loop):
+def test_enqueue_sets_metadata():
     """Enqueueing job onto queues modifies meta data."""
 
     q = Queue()
@@ -172,7 +172,7 @@ def test_enqueue_sets_metadata(set_loop):
     assert job.enqueued_at
 
 
-def test_pop_job_id(set_loop):
+def test_pop_job_id():
     """Popping job IDs from queues."""
 
     # Set up
@@ -188,7 +188,7 @@ def test_pop_job_id(set_loop):
     assert not (yield from q.count)
 
 
-def test_dequeue(set_loop):
+def test_dequeue():
     """Dequeueing jobs from queues."""
 
     # Set up
@@ -208,7 +208,7 @@ def test_dequeue(set_loop):
     assert not (yield from q.count)
 
 
-def test_dequeue_deleted_jobs(set_loop):
+def test_dequeue_deleted_jobs():
     """Dequeueing deleted jobs from queues don't blow the stack."""
 
     q = Queue()
@@ -218,7 +218,7 @@ def test_dequeue_deleted_jobs(set_loop):
     yield from q.dequeue()
 
 
-def test_dequeue_instance_method(set_loop):
+def test_dequeue_instance_method():
     """Dequeueing instance method jobs from queues."""
 
     q = Queue()
@@ -235,7 +235,7 @@ def test_dequeue_instance_method(set_loop):
     assert job.args == (4,)
 
 
-def test_dequeue_class_method(set_loop):
+def test_dequeue_class_method():
     """Dequeueing class method jobs from queues."""
 
     q = Queue()
@@ -248,7 +248,7 @@ def test_dequeue_class_method(set_loop):
     assert job.args == (3, 4)
 
 
-def test_dequeue_ignores_nonexisting_jobs(set_loop):
+def test_dequeue_ignores_nonexisting_jobs():
     """Dequeuing silently ignores non-existing jobs."""
 
     q = Queue()
@@ -265,7 +265,7 @@ def test_dequeue_ignores_nonexisting_jobs(set_loop):
     assert not (yield from q.count)
 
 
-def test_dequeue_any(set_loop):
+def test_dequeue_any():
     """Fetching work from any given queue."""
 
     fooq = Queue('foo')
@@ -296,7 +296,7 @@ def test_dequeue_any(set_loop):
     assert job.args[0] == 'for Bar', 'Bar should be dequeued second.'
 
 
-def test_dequeue_any_ignores_nonexisting_jobs(set_loop):
+def test_dequeue_any_ignores_nonexisting_jobs():
     """Dequeuing (from any queue) silently ignores non-existing jobs."""
 
     q = Queue('low')
@@ -309,7 +309,7 @@ def test_dequeue_any_ignores_nonexisting_jobs(set_loop):
     assert not (yield from q.count)
 
 
-def test_dequeue_any_with_timeout(set_loop):
+def test_dequeue_any_with_timeout():
     """Dequeue any behavior with timeout."""
 
     queue = Queue()
@@ -321,7 +321,7 @@ def test_dequeue_any_with_timeout(set_loop):
     assert (yield from Queue.dequeue_any([queue], 1)) == (job, queue)
 
 
-def test_enqueue_sets_status(set_loop):
+def test_enqueue_sets_status():
     """Enqueueing a job sets its status to "queued"."""
 
     q = Queue()
@@ -329,7 +329,7 @@ def test_enqueue_sets_status(set_loop):
     assert (yield from job.get_status()) == JobStatus.QUEUED
 
 
-def test_enqueue_call_sets_status(set_loop):
+def test_enqueue_call_sets_status():
     """Enqueueing call sets jobs state to 'queued'."""
 
     q = Queue()
@@ -337,7 +337,7 @@ def test_enqueue_call_sets_status(set_loop):
     assert (yield from job.is_queued)
 
 
-def test_enqueue_explicit_args(set_loop):
+def test_enqueue_explicit_args():
     """enqueue() works for both implicit/explicit args."""
 
     q = Queue()
@@ -361,9 +361,9 @@ def test_enqueue_explicit_args(set_loop):
 def test_all_queues(loop):
     """All queues"""
 
-    q1 = Queue('first-queue', loop=loop)
-    q2 = Queue('second-queue', loop=loop)
-    q3 = Queue('third-queue', loop=loop)
+    q1 = Queue('first-queue')
+    q2 = Queue('second-queue')
+    q3 = Queue('third-queue')
 
     # Ensure a queue is added only once a job is enqueued
     assert not len((yield from Queue.all()))
@@ -389,12 +389,12 @@ def test_all_queues(loop):
     assert len((yield from Queue.all())) == 3
 
 
-def test_enqueue_dependents(loop, redis):
+def test_enqueue_dependents(redis):
     """Enqueueing dependent jobs pushes all jobs in the depends set to the
     queue and removes them from DeferredJobQueue.
     """
 
-    q = Queue(loop=loop)
+    q = Queue()
     parent_job = Job.create(func=say_hello)
     yield from parent_job.save()
     job_1 = yield from q.enqueue(say_hello, depends_on=parent_job)
@@ -413,14 +413,14 @@ def test_enqueue_dependents(loop, redis):
     assert not (yield from registry.get_job_ids())
 
 
-def test_enqueue_dependents_on_multiple_queues(loop, redis):
+def test_enqueue_dependents_on_multiple_queues(redis):
     """Enqueueing dependent jobs on multiple queues pushes jobs in the
     queues and removes them from DeferredJobRegistry for each
     different queue.
     """
 
-    q1 = Queue('queue_1', loop=loop)
-    q2 = Queue('queue_2', loop=loop)
+    q1 = Queue("queue_1")
+    q2 = Queue("queue_2")
     parent_job = Job.create(func=say_hello)
     yield from parent_job.save()
     job_1 = yield from q1.enqueue(say_hello, depends_on=parent_job)
@@ -446,7 +446,7 @@ def test_enqueue_dependents_on_multiple_queues(loop, redis):
     assert not (yield from registry_2.get_job_ids())
 
 
-def test_enqueue_job_with_dependency(set_loop):
+def test_enqueue_job_with_dependency():
     """Jobs are enqueued only when their dependencies are finished."""
 
     # Job with unfinished dependency is not immediately enqueued
@@ -465,7 +465,7 @@ def test_enqueue_job_with_dependency(set_loop):
     assert (yield from job.get_status()) == JobStatus.QUEUED
 
 
-def test_enqueue_job_with_dependency_by_id(set_loop):
+def test_enqueue_job_with_dependency_by_id():
     """"Can specify job dependency with job object or job id."""
 
     parent_job = Job.create(func=say_hello)
@@ -481,7 +481,7 @@ def test_enqueue_job_with_dependency_by_id(set_loop):
     assert job.timeout == Queue.DEFAULT_TIMEOUT
 
 
-def test_enqueue_job_with_dependency_and_timeout(set_loop):
+def test_enqueue_job_with_dependency_and_timeout():
     """Jobs remember their timeout when enqueued as a dependency."""
 
     # Job with unfinished dependency is not immediately enqueued
@@ -501,7 +501,7 @@ def test_enqueue_job_with_dependency_and_timeout(set_loop):
     assert job.timeout == 123
 
 
-def test_enqueue_job_with_queue_default_timeout(set_loop):
+def test_enqueue_job_with_queue_default_timeout():
     """Default timeout specified in queue constructor will be applied to job.
     """
 
@@ -510,7 +510,7 @@ def test_enqueue_job_with_queue_default_timeout(set_loop):
     assert job.timeout == 9999
 
 
-def test_enqueue_call_custom_description(set_loop):
+def test_enqueue_call_custom_description():
     """Custom description passed into enqueue_call will be saved in
     returned job.
     """
@@ -520,7 +520,7 @@ def test_enqueue_call_custom_description(set_loop):
     assert job.description == '...'
 
 
-def test_enqueue_call_custom_meta(set_loop):
+def test_enqueue_call_custom_meta():
     """Custom meta passed into enqueue_call will be stored as job attribute."""
 
     q = Queue()
@@ -531,7 +531,7 @@ def test_enqueue_call_custom_meta(set_loop):
 # Failed queue tests.
 
 
-def test_requeue_job(set_loop):
+def test_requeue_job():
     """Requeueing existing jobs."""
 
     job = Job.create(func=div_by_zero, args=(1, 2, 3))
@@ -548,7 +548,7 @@ def test_requeue_job(set_loop):
     assert (yield from Queue('fake').count) == 1
 
 
-def test_requeue_nonfailed_job_fails(set_loop):
+def test_requeue_nonfailed_job_fails():
     """Requeueing non-failed jobs raises error."""
 
     q = Queue()
@@ -559,7 +559,7 @@ def test_requeue_nonfailed_job_fails(set_loop):
         yield from get_failed_queue().requeue(job.id)
 
 
-def test_quarantine_preserves_timeout(set_loop):
+def test_quarantine_preserves_timeout():
     """Quarantine preserves job timeout."""
 
     job = Job.create(func=div_by_zero, args=(1, 2, 3))
@@ -571,7 +571,7 @@ def test_quarantine_preserves_timeout(set_loop):
     assert job.timeout == 200
 
 
-def test_requeueing_preserves_timeout(set_loop):
+def test_requeueing_preserves_timeout():
     """Requeueing preserves job timeout."""
 
     job = Job.create(func=div_by_zero, args=(1, 2, 3))
@@ -585,7 +585,7 @@ def test_requeueing_preserves_timeout(set_loop):
     assert job.timeout == 200
 
 
-def test_requeue_sets_status_to_queued(set_loop):
+def test_requeue_sets_status_to_queued():
     """Requeueing a job should set its status back to QUEUED."""
 
     job = Job.create(func=div_by_zero, args=(1, 2, 3))
@@ -597,7 +597,7 @@ def test_requeue_sets_status_to_queued(set_loop):
     assert (yield from job.get_status()) == JobStatus.QUEUED
 
 
-def test_skip_queue(set_loop):
+def test_skip_queue():
     """Ensure the skip_queue option functions."""
 
     q = Queue('foo')
