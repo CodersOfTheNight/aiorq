@@ -17,9 +17,3 @@ class JobTimeoutException(Exception):
     """Error signify that coroutine is not finished in time."""
 
     pass
-
-
-class PipelineError(Exception):
-    """Missed pipeline for current `asyncio.Task`."""
-
-    pass
