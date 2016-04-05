@@ -10,7 +10,7 @@
 
 import asyncio
 
-from .keys import queue_key
+from .keys import queue_key, job_key
 
 
 @asyncio.coroutine
@@ -50,8 +50,14 @@ def compact_queue(connection):
 
 
 @asyncio.coroutine
-def enqueue_job(connection):
-    pass
+def enqueue_job(connection, id, spec):
+    """Persists the job specification to it corresponding Redis id."""
+
+    # TODO: add id to the queue, motherfucker!
+    fields = (field
+              for item_fields in spec.items()
+              for field in item_fields)
+    yield from connection.hmset(job_key(id), *fields)
 
 
 @asyncio.coroutine

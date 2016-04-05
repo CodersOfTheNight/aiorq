@@ -13,3 +13,9 @@ def queue_key(name):
     """Redis key for named queue."""
 
     return 'rq:queue:' + name
+
+
+def job_key(id):
+    """Redis key for job hash."""
+
+    return 'rq:job:' + id
