@@ -2,31 +2,7 @@
     aiorq.utils
     ~~~~~~~~~~~
 
-    This module implements redis pipeline access for chained method calls.
-
-    Implied usage:
-
-    .. code:: python
-
-        class Foo:
-
-            pipeline = pipeline_property
-
-            @pipeline_method
-            def do(self):
-
-                self.pipeline.set('foo', 'bar')
-
-        foo = Foo()
-        multi = redis.multi_exec()
-
-        with Pipeline():
-            foo.do()
-
-        yield from multi.execute()
-
-    Foo class should have loop, pipeline and connection attributes.
-    This is common convention for aiorq Queue, Job and Worker classes.
+    This module implements different utility functions.
 
     :copyright: (c) 2015-2016 by Artem Malyshev.
     :license: LGPL-3, see LICENSE for more details.
