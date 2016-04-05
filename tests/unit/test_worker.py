@@ -14,7 +14,7 @@ from fixtures import (say_hello, div_by_zero, mock, touch_a_mock,
 from helpers import strip_microseconds
 
 
-def test_create_worker():
+def test_create_worker(set_loop):
     """Worker creation using various inputs."""
 
     # With single string argument
@@ -50,17 +50,17 @@ def test_work_and_quit(loop):
     """Worker processes work, then quits."""
 
     fooq, barq = Queue('foo'), Queue('bar')
-    w = Worker([fooq, barq])
-    assert not (yield from w.work(burst=True, loop=loop))
+    w = Worker([fooq, barq], loop=loop)
+    assert not (yield from w.work(burst=True))
 
     yield from fooq.enqueue(say_hello, name='Frank')
-    assert (yield from w.work(burst=True, loop=loop))
+    assert (yield from w.work(burst=True))
 
 
-def test_worker_ttl(redis):
+def test_worker_ttl(loop, redis):
     """Worker ttl."""
 
-    w = Worker([])
+    w = Worker([], loop=loop)
     yield from w.register_birth()
     [worker_key] = yield from redis.smembers(Worker.redis_workers_keys)
     assert (yield from redis.ttl(worker_key))
@@ -71,9 +71,9 @@ def test_work_via_string_argument(loop):
     """Worker processes work fed via string arguments."""
 
     q = Queue('foo')
-    w = Worker([q])
+    w = Worker([q], loop=loop)
     job = yield from q.enqueue('fixtures.say_hello', name='Frank')
-    assert (yield from w.work(burst=True, loop=loop))
+    assert (yield from w.work(burst=True))
     assert (yield from job.result) == 'Hi there, Frank!'
 
 
@@ -81,14 +81,14 @@ def test_job_times(loop):
     """Job times are set correctly."""
 
     q = Queue('foo')
-    w = Worker([q])
+    w = Worker([q], loop=loop)
     before = utcnow().replace(microsecond=0)
     job = yield from q.enqueue(say_hello)
 
     assert job.enqueued_at
     assert not job.started_at
     assert not job.ended_at
-    assert (yield from w.work(burst=True, loop=loop))
+    assert (yield from w.work(burst=True))
     assert (yield from job.result) == 'Hi there, Stranger!'
 
     after = utcnow().replace(microsecond=0)
@@ -127,8 +127,8 @@ def test_work_is_unreadable(redis, loop):
     assert (yield from q.count) == 1
 
     # All set, we're going to process it
-    w = Worker([q])
-    yield from w.work(burst=True, loop=loop)  # Should silently pass
+    w = Worker([q], loop=loop)
+    yield from w.work(burst=True)  # Should silently pass
     assert (yield from q.count) == 0
     assert (yield from failed_q.count) == 1
 
@@ -150,8 +150,8 @@ def test_work_fails(loop):
     # keep for later
     enqueued_at_date = strip_microseconds(job.enqueued_at)
 
-    w = Worker([q])
-    yield from w.work(burst=True, loop=loop)  # Should silently pass
+    w = Worker([q], loop=loop)
+    yield from w.work(burst=True)  # Should silently pass
 
     # Postconditions
     assert not (yield from q.count)
@@ -188,8 +188,8 @@ def test_custom_exc_handling(loop):
     job = yield from q.enqueue(div_by_zero)
     assert (yield from q.count) == 1
 
-    w = Worker([q], exception_handlers=black_hole)
-    yield from w.work(burst=True, loop=loop)  # Should silently pass
+    w = Worker([q], exception_handlers=black_hole, loop=loop)
+    yield from w.work(burst=True)  # Should silently pass
 
     # Postconditions
     assert not (yield from q.count)
@@ -209,8 +209,8 @@ def test_cancelled_jobs_arent_executed(redis, loop):
     # Here, we cancel the job, so the sentinel file may not be created
     yield from redis.delete(job.key)
 
-    w = Worker([q])
-    yield from w.work(burst=True, loop=loop)
+    w = Worker([q], loop=loop)
+    yield from w.work(burst=True)
     assert not (yield from q.count)
 
     # Should not have created evidence of execution
@@ -243,20 +243,20 @@ def test_worker_sets_result_ttl(redis, loop):
 
     q = Queue()
     job = yield from q.enqueue(say_hello, args=('Frank',), result_ttl=10)
-    w = Worker([q])
-    yield from w.work(burst=True, loop=loop)
+    w = Worker([q], loop=loop)
+    yield from w.work(burst=True)
     assert (yield from redis.ttl(job.key))
 
     # Job with -1 result_ttl don't expire
     job = yield from q.enqueue(say_hello, args=('Frank',), result_ttl=-1)
-    w = Worker([q])
-    yield from w.work(burst=True, loop=loop)
+    w = Worker([q], loop=loop)
+    yield from w.work(burst=True)
     assert (yield from redis.ttl(job.key)) == -1
 
     # Job with result_ttl = 0 gets deleted immediately
     job = yield from q.enqueue(say_hello, args=('Frank',), result_ttl=0)
-    w = Worker([q])
-    yield from w.work(burst=True, loop=loop)
+    w = Worker([q], loop=loop)
+    yield from w.work(burst=True)
     assert not (yield from redis.get(job.key))
 
 
@@ -264,7 +264,7 @@ def test_worker_sets_job_status(loop):
     """Ensure that worker correctly sets job status."""
 
     q = Queue()
-    w = Worker([q])
+    w = Worker([q], loop=loop)
 
     job = yield from q.enqueue(say_hello)
     assert (yield from job.get_status()) == JobStatus.QUEUED
@@ -272,7 +272,7 @@ def test_worker_sets_job_status(loop):
     assert not (yield from job.is_finished)
     assert not (yield from job.is_failed)
 
-    yield from w.work(burst=True, loop=loop)
+    yield from w.work(burst=True)
     job = yield from Job.fetch(job.id)
     assert (yield from job.get_status()) == JobStatus.FINISHED
     assert not (yield from job.is_queued)
@@ -281,7 +281,7 @@ def test_worker_sets_job_status(loop):
 
     # Failed jobs should set status to "failed"
     job = yield from q.enqueue(div_by_zero, args=(1,))
-    yield from w.work(burst=True, loop=loop)
+    yield from w.work(burst=True)
     job = yield from Job.fetch(job.id)
     assert (yield from job.get_status()) == JobStatus.FAILED
     assert not (yield from job.is_queued)
@@ -293,25 +293,25 @@ def test_job_dependency(loop):
     """Enqueue dependent jobs only if their parents don't fail."""
 
     q = Queue()
-    w = Worker([q])
+    w = Worker([q], loop=loop)
     parent_job = yield from q.enqueue(say_hello)
     job = yield from q.enqueue_call(say_hello, depends_on=parent_job)
-    yield from w.work(burst=True, loop=loop)
+    yield from w.work(burst=True)
     job = yield from Job.fetch(job.id)
     assert (yield from job.get_status()) == JobStatus.FINISHED
 
     parent_job = yield from q.enqueue(div_by_zero)
     job = yield from q.enqueue_call(say_hello, depends_on=parent_job)
-    yield from w.work(burst=True, loop=loop)
+    yield from w.work(burst=True)
     job = yield from Job.fetch(job.id)
     assert (yield from job.get_status()) != JobStatus.FINISHED
 
 
-def test_get_current_job(redis):
+def test_get_current_job(loop, redis):
     """Ensure worker.get_current_job() works properly."""
 
     q = Queue()
-    worker = Worker([q])
+    worker = Worker([q], loop=loop)
     job = yield from q.enqueue_call(say_hello)
 
     assert not (yield from redis.hget(worker.key, 'current_job'))
@@ -321,7 +321,7 @@ def test_get_current_job(redis):
     assert (yield from worker.get_current_job()) == job
 
 
-def test_custom_job_class():
+def test_custom_job_class(set_loop):
     """Ensure Worker accepts custom job class."""
 
     class CustomJob:
@@ -332,12 +332,12 @@ def test_custom_job_class():
     assert worker.job_class == CustomJob
 
 
-def test_prepare_job_execution(redis):
+def test_prepare_job_execution(loop, redis):
     """Prepare job execution does the necessary bookkeeping."""
 
     queue = Queue(connection=redis)
     job = yield from queue.enqueue(say_hello)
-    worker = Worker([queue])
+    worker = Worker([queue], loop=loop)
     yield from worker.prepare_job_execution(job)
 
     # Updates working queue
@@ -353,10 +353,10 @@ def test_work_unicode_friendly(loop):
     """Worker processes work with unicode description, then quits."""
 
     q = Queue('foo')
-    w = Worker([q])
+    w = Worker([q], loop=loop)
     job = yield from q.enqueue(
         'fixtures.say_hello', name='Adam', description='你好 世界!')
-    assert (yield from w.work(burst=True, loop=loop))
+    assert (yield from w.work(burst=True))
     assert (yield from job.result) == 'Hi there, Adam!'
     assert job.description == '你好 世界!'
 
@@ -365,29 +365,29 @@ def test_suspend_worker_execution(redis, loop):
     """Test Pause Worker Execution."""
 
     q = Queue()
-    w = Worker([q])
+    w = Worker([q], loop=loop)
     yield from q.enqueue(touch_a_mock)
 
     yield from suspend(redis)
 
-    yield from w.work(burst=True, loop=loop)
+    yield from w.work(burst=True)
     assert (yield from q.count) == 1
     assert not mock.call_count
 
     yield from resume(redis)
 
-    yield from w.work(burst=True, loop=loop)
+    yield from w.work(burst=True)
     assert not (yield from q.count)
     assert mock.call_count
 
     mock.reset_mock()
 
 
-def test_suspend_with_duration(redis, loop):
+def test_suspend_with_duration(loop, redis):
     """Test worker execution will continue after specified duration."""
 
     q = Queue()
-    w = Worker([q])
+    w = Worker([q], loop=loop)
     for i in range(5):
         yield from q.enqueue(do_nothing)
 
@@ -395,18 +395,18 @@ def test_suspend_with_duration(redis, loop):
     yield from suspend(redis, 2)
 
     # So when this burst of work happens the queue should remain at 5
-    yield from w.work(burst=True, loop=loop)
+    yield from w.work(burst=True)
     assert (yield from q.count) == 5
 
     yield from asyncio.sleep(3, loop=loop)
 
     # The suspension should be expired now, and a burst of work should
     # now clear the queue
-    yield from w.work(burst=True, loop=loop)
+    yield from w.work(burst=True)
     assert (yield from q.count) == 0
 
 
-def test_worker_hash_():
+def test_worker_hash(set_loop):
     """Workers are hashed by their name attribute."""
 
     q = Queue('foo')
@@ -417,11 +417,11 @@ def test_worker_hash_():
     assert len(worker_set) == 2
 
 
-def test_worker_sets_birth():
+def test_worker_sets_birth(loop):
     """Ensure worker correctly sets worker birth date."""
 
     q = Queue()
-    w = Worker([q])
+    w = Worker([q], loop=loop)
 
     yield from w.register_birth()
 
@@ -430,11 +430,11 @@ def test_worker_sets_birth():
     assert type(birth_date).__name__ == 'datetime'
 
 
-def test_worker_sets_death():
+def test_worker_sets_death(loop):
     """Ensure worker correctly sets worker death date."""
 
     q = Queue()
-    w = Worker([q])
+    w = Worker([q], loop=loop)
 
     yield from w.register_death()
 
@@ -443,7 +443,7 @@ def test_worker_sets_death():
     assert type(death_date).__name__ == 'datetime'
 
 
-def test_clean_queue_registries(redis):
+def test_clean_queue_registries(loop, redis):
     """Worker.clean_registries sets last_cleaned_at and cleans registries."""
 
     foo_queue = Queue('foo', connection=redis)
@@ -456,7 +456,7 @@ def test_clean_queue_registries(redis):
     (yield from redis.zadd(bar_registry.key, 1, 'bar'))
     assert (yield from redis.zcard(bar_registry.key)) == 1
 
-    worker = Worker([foo_queue, bar_queue])
+    worker = Worker([foo_queue, bar_queue], loop=loop)
     assert not worker.last_cleaned_at
     yield from worker.clean_registries()
     assert worker.last_cleaned_at
@@ -464,11 +464,11 @@ def test_clean_queue_registries(redis):
     assert not (yield from redis.zcard(bar_registry.key))
 
 
-def test_should_run_maintenance_tasks():
+def test_should_run_maintenance_tasks(loop):
     """Workers should run maintenance tasks on startup and every hour."""
 
     queue = Queue()
-    worker = Worker(queue)
+    worker = Worker(queue, loop=loop)
     assert worker.should_run_maintenance_tasks
 
     worker.last_cleaned_at = utcnow()
@@ -484,6 +484,6 @@ def test_worker_calls_clean_registries(redis, loop):
     registry = StartedJobRegistry(connection=redis)
     yield from redis.zadd(registry.key, 1, 'foo')
 
-    worker = Worker(queue, connection=redis)
-    yield from worker.work(burst=True, loop=loop)
+    worker = Worker(queue, connection=redis, loop=loop)
+    yield from worker.work(burst=True)
     assert not (yield from redis.zcard(registry.key))

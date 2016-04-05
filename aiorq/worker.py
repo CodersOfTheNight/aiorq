@@ -51,9 +51,9 @@ class Worker:
 
     def __init__(self, queues, name=None, default_result_ttl=None,
                  connection=None, exception_handlers=None,
-                 default_worker_ttl=None, job_class=None):
-        self.connection = resolve_connection(connection)
+                 default_worker_ttl=None, job_class=None, loop=None):
 
+        self.connection = resolve_connection(connection)
         # TODO: assert against empty queues.
         # TODO: test worker creation without global connection.
         queues = [self.queue_class(name=q, connection=connection)
@@ -92,6 +92,10 @@ class Worker:
             if isinstance(job_class, string_types):
                 job_class = import_attribute(job_class)
             self.job_class = job_class
+
+        if not loop:
+            loop = asyncio.get_event_loop()
+        self.loop = loop
 
     def validate_queues(self):
         """Sanity check for the given queues."""
@@ -188,7 +192,7 @@ class Worker:
         self.pipeline.hset(self.key, 'state', state)
 
     @asyncio.coroutine
-    def check_for_suspension(self, burst, *, loop=None):
+    def check_for_suspension(self, burst):
         """Check to see if workers have been suspended by `rq suspend`"""
 
         before_state = None
@@ -214,7 +218,7 @@ class Worker:
             yield from self.set_state(before_state)
 
     @asyncio.coroutine
-    def work(self, burst=False, *, loop=None):
+    def work(self, burst=False):
         """Starts the work loop.
 
         Pops and performs all jobs on the current list of queues.
@@ -232,7 +236,7 @@ class Worker:
 
         try:
             while True:
-                if (yield from self.check_for_suspension(burst, loop=loop)):
+                if (yield from self.check_for_suspension(burst)):
                     break
 
                 if self.should_run_maintenance_tasks:
@@ -259,9 +263,9 @@ class Worker:
                     break  # TODO: do we need to use break for burst mode only?
 
                 job, queue = result
-                job_coroutine = self.execute_job(job, queue, loop=loop)
+                job_coroutine = self.execute_job(job, queue)
                 # TODO: remove this task from set when it will be finished
-                jobs.add(ensure_future(job_coroutine, loop=loop))
+                jobs.add(ensure_future(job_coroutine, loop=self.loop))
 
                 # TODO: should be set after first coroutine ends
                 did_perform_work = True
@@ -270,19 +274,19 @@ class Worker:
             yield from self.register_death()
         return did_perform_work
 
-    def request_force_stop(self, loop):
+    def request_force_stop(self):
         """Terminates the application (cold shutdown)."""
 
         logger.warning('Cold shut down')
-        loop.stop()
+        self.loop.stop()
 
-    def request_stop(self, loop):
+    def request_stop(self):
         """Stops the current worker loop but waits for coroutines to end
         gracefully (warm shutdown).
         """
 
         logger.warning('Warm shut down requested')
-        loop.add_signal_handler(signal.SIGTERM, self.request_force_stop, loop)
+        self.loop.add_signal_handler(signal.SIGTERM, self.request_force_stop)
 
         # If shutdown is requested in the middle of a job, wait until
         # finish before shutting down
@@ -291,7 +295,7 @@ class Worker:
             logger.debug('Stopping after running coroutines are finished.  '
                          'Press Ctrl+C again for a cold shutdown.')
         else:
-            loop.stop()
+            self.loop.stop()
 
     def queue_names(self):
         """Returns the queue names of this worker's queues."""
@@ -391,11 +395,11 @@ class Worker:
         self.pipeline.expire(self.key, timeout)
 
     @asyncio.coroutine
-    def execute_job(self, job, queue, *, loop=None):
+    def execute_job(self, job, queue):
         """Send a job into asyncio event loop."""
 
         yield from self.set_state('busy')
-        yield from self.perform_job(job, loop=loop)
+        yield from self.perform_job(job)
         # TODO: set this status only if there are no running coroutines
         yield from self.set_state('idle')
         yield from self.heartbeat()
@@ -404,7 +408,7 @@ class Worker:
             yield from queue.enqueue_dependents(job)
 
     @asyncio.coroutine
-    def perform_job(self, job, *, loop=None):
+    def perform_job(self, job):
         """Performs the actual work of a job."""
 
         yield from self.prepare_job_execution(job)
@@ -416,7 +420,7 @@ class Worker:
             timeout = job.timeout or self.queue_class.DEFAULT_TIMEOUT
             try:
                 rv = yield from asyncio.wait_for(
-                    job.perform(), timeout, loop=loop)
+                    job.perform(), timeout, loop=self.loop)
             except asyncio.TimeoutError as error:
                 raise JobTimeoutException from error
 
@@ -501,7 +505,8 @@ class Worker:
     @asyncio.coroutine
     def get_current_job_id(self):
 
-        return as_text((yield from self.connection.hget(self.key, 'current_job')))
+        result = yield from self.connection.hget(self.key, 'current_job')
+        return as_text(result)
 
     @asyncio.coroutine
     def get_current_job(self):

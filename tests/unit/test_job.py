@@ -325,8 +325,8 @@ def test_job_access_within_job_function(loop):
     q = Queue()
     # access_self calls get_current_job() and asserts
     yield from q.enqueue(access_self)
-    w = Worker(q)
-    yield from w.work(burst=True, loop=loop)
+    w = Worker(q, loop=loop)
+    yield from w.work(burst=True)
 
 
 def test_get_result_ttl():

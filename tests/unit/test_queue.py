@@ -382,8 +382,8 @@ def test_all_queues(loop):
     assert 'third-queue' in names
 
     # Now empty two queues
-    w = Worker([q2, q3])
-    yield from w.work(burst=True, loop=loop)
+    w = Worker([q2, q3], loop=loop)
+    yield from w.work(burst=True)
 
     # Queue.all() should still report the empty queues
     assert len((yield from Queue.all())) == 3
