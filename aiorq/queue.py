@@ -23,6 +23,7 @@ from .connections import resolve_connection
 from .exceptions import (NoSuchJobError, UnpickleError,
                          DequeueTimeout, InvalidJobOperationError)
 from .job import Job
+from .pipeline import Pipeline, pipeline_method, pipeline_property
 
 
 def get_failed_queue(connection=None):
@@ -39,6 +40,8 @@ class Queue:
     DEFAULT_TIMEOUT = 180
     redis_queue_namespace_prefix = 'rq:queue:'
     redis_queues_keys = 'rq:queues'
+
+    pipeline = pipeline_property
 
     @classmethod
     @asyncio.coroutine
@@ -68,7 +71,7 @@ class Queue:
         return cls(name, connection=connection)
 
     def __init__(self, name='default', default_timeout=None, connection=None,
-                 job_class=None):
+                 job_class=None, loop=None):
 
         self.connection = resolve_connection(connection)
         prefix = self.redis_queue_namespace_prefix
@@ -80,6 +83,10 @@ class Queue:
             if isinstance(job_class, str):
                 job_class = import_attribute(job_class)
             self.job_class = job_class
+
+        if not loop:
+            loop = asyncio.get_event_loop()
+        self.loop = loop
 
     def __len__(self):
         """Queue length."""
@@ -178,17 +185,14 @@ class Queue:
 
         return (yield from self.connection.llen(self.key))
 
-    @asyncio.coroutine
-    def remove(self, job_or_id, pipeline=None):
+    @pipeline_method
+    def remove(self, job_or_id):
         """Removes Job from queue, accepts either a Job instance or ID."""
 
         job_id = (job_or_id.id
                   if isinstance(job_or_id, self.job_class)
                   else job_or_id)
-        connection = pipeline if pipeline else self.connection
-        coroutine = connection.lrem(self.key, 1, job_id)
-        if not pipeline:
-            return (yield from coroutine)
+        self.pipeline.lrem(self.key, 1, job_id)
 
     @asyncio.coroutine
     def compact(self):
@@ -206,21 +210,18 @@ class Queue:
             if (yield from self.job_class.exists(job_id, self.connection)):
                 (yield from self.connection.rpush(self.key, job_id))
 
-    @asyncio.coroutine
-    def push_job_id(self, job_id, pipeline=None, at_front=False):
+    @pipeline_method
+    def push_job_id(self, job_id, at_front=False):
         """Pushes a job ID on the corresponding Redis queue.
 
         'at_front' allows you to push the job onto the front instead
         of the back of the queue
         """
 
-        connection = pipeline if pipeline else self.connection
         if at_front:
-            coroutine = connection.lpush(self.key, job_id)
+            self.pipeline.lpush(self.key, job_id)
         else:
-            coroutine = connection.rpush(self.key, job_id)
-        if not pipeline:
-            yield from coroutine
+            self.pipeline.rpush(self.key, job_id)
 
     @asyncio.coroutine
     def enqueue(self, f, *args, **kwargs):
@@ -293,12 +294,9 @@ class Queue:
                     if dependency_status != JobStatus.FINISHED:
                         yield from job.set_status(JobStatus.DEFERRED)
                         multi = self.connection.multi_exec()
-                        # NOTE: we need to use yield from in the two
-                        # lines below because they are coroutines, but
-                        # there are no inner yield from on multi since
-                        # we specify pipeline mode.
-                        yield from job.register_dependency(pipeline=multi)
-                        yield from job.save(pipeline=multi)
+                        with Pipeline(multi, loop=self.loop):
+                            yield from job.register_dependency(pipeline=multi)
+                            yield from job.save(pipeline=multi)
                         yield from multi.execute()
                         return job
                     break
@@ -311,23 +309,22 @@ class Queue:
 
         return job
 
-    @asyncio.coroutine
-    def enqueue_job(self, job, pipeline=None, at_front=False):
+    @pipeline_method
+    def enqueue_job(self, job, at_front=False):
         """Enqueues a job for delayed execution."""
 
-        pipe = pipeline if pipeline else self.connection.multi_exec()
-        pipe.sadd(self.redis_queues_keys, self.key)
-        yield from job.set_status(JobStatus.QUEUED, pipeline=pipe)
+        with Pipeline(factory=self.connection.multi_exec, loop=self.loop):
+            self.pipeline.sadd(self.redis_queues_keys, self.key)
+            yield from job.set_status(JobStatus.QUEUED, pipeline=self.pipeline)
 
-        job.origin = self.name
-        job.enqueued_at = utcnow()
+            job.origin = self.name
+            job.enqueued_at = utcnow()
 
-        if job.timeout is None:
-            job.timeout = self.DEFAULT_TIMEOUT
+            if job.timeout is None:
+                job.timeout = self.DEFAULT_TIMEOUT
 
-        yield from job.save(pipeline=pipe)
-        if not pipeline:
-            yield from pipe.execute()
+            yield from job.save(pipeline=self.pipeline)
+
         yield from self.push_job_id(job.id, at_front=at_front)
         return job
 
@@ -350,13 +347,16 @@ class Queue:
             registry = DeferredJobRegistry(dependent.origin, self.connection)
 
             pipe = self.connection.multi_exec()
-            yield from registry.remove(dependent, pipeline=pipe)
-            if dependent.origin == self.name:
-                yield from self.enqueue_job(dependent, pipeline=pipe)
-            else:
-                queue = Queue(name=dependent.origin,
-                              connection=self.connection)
-                yield from queue.enqueue_job(dependent, pipeline=pipe)
+
+            with Pipeline(pipe, loop=self.loop):
+                yield from registry.remove(dependent, pipeline=pipe)
+                if dependent.origin == self.name:
+                    yield from self.enqueue_job(dependent)
+                else:
+                    queue = Queue(name=dependent.origin,
+                                  connection=self.connection)
+                    yield from queue.enqueue_job(dependent)
+
             yield from pipe.execute()
 
     @asyncio.coroutine
@@ -506,9 +506,9 @@ class FailedQueue(Queue):
         # string.  So we need to do it explicitly.
         job.exc_info = str(exc_info)
         pipe = self.connection.multi_exec()
-        yield from job.save(pipeline=pipe)
-
-        yield from self.push_job_id(job.id, pipeline=pipe)
+        with Pipeline(pipe, loop=self.loop):
+            yield from job.save(pipeline=pipe)
+            yield from self.push_job_id(job.id)
         yield from pipe.execute()
 
         return job
