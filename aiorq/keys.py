@@ -9,6 +9,12 @@
 """
 
 
+def queues_key():
+    """Redis key for all named queues names."""
+
+    return 'rq:queues'
+
+
 def queue_key(name):
     """Redis key for named queue."""
 

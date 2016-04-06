@@ -10,7 +10,7 @@
 
 import asyncio
 
-from .keys import queue_key, job_key
+from .keys import queues_key, queue_key, job_key
 
 
 @asyncio.coroutine
@@ -22,7 +22,14 @@ def queue_length(connection, name):
 
 @asyncio.coroutine
 def empty_queue(connection, name):
-    """Removes all jobs on the queue."""
+    """Removes all jobs on the queue.
+
+    :param connection: Asynchronous redis connection
+    :type connection: `aioredis.Redis`
+    :param name: Queue name
+    :type name: str
+
+    """
 
     script = b"""
         local prefix = "rq:job:"
@@ -50,14 +57,28 @@ def compact_queue(connection):
 
 
 @asyncio.coroutine
-def enqueue_job(connection, id, spec):
-    """Persists the job specification to it corresponding Redis id."""
+def enqueue_job(connection, queue, id, spec):
+    """Persists the job specification to it corresponding Redis id.
+
+    :param connection: Asynchronous redis connection
+    :type connection: `aioredis.Redis`
+    :param queue: Queue name
+    :type queue: str
+    :param id: Job uuid
+    :type id: str
+    :param spec: Job specification
+    :type spec: dict
+
+    """
 
     # TODO: add id to the queue, motherfucker!
+    multi = connection.multi_exec()
+    multi.sadd(queues_key(), queue)
     fields = (field
               for item_fields in spec.items()
               for field in item_fields)
-    yield from connection.hmset(job_key(id), *fields)
+    multi.hmset(job_key(id), *fields)
+    yield from multi.execute()
 
 
 @asyncio.coroutine
