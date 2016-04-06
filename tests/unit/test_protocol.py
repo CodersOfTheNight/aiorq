@@ -3,6 +3,9 @@ from aiorq.job import utcparse
 from aiorq.protocol import empty_queue, queue_length, enqueue_job
 
 
+# Queue.
+
+
 def test_empty_queue(redis):
     """Emptying queue."""
 
@@ -13,8 +16,26 @@ def test_empty_queue(redis):
     assert not (yield from queue_length(redis, 'example'))
 
 
-# TODO: test `empty_queue` removes jobs
+def test_empty_removes_jobs(redis):
+    """Emptying a queue deletes the associated job objects."""
+
+    queue = 'default'
+    id = '2a5079e7-387b-492f-a81c-68aa55c194c8'
+    spec = {
+        'created_at': '2016-04-05T22:40:35Z',
+        'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+        'description': 'fixtures.some_calculation(3, 4, z=2)',
+        'timeout': 180,
+    }
+    yield from enqueue_job(redis, queue, id, spec)
+    yield from empty_queue(redis, 'default')
+    assert not (yield from redis.exists(job_key(id)))
+
+
 # TODO: test `empty_queue` removes job dependents
+
+
+# Enqueue job.
 
 
 def test_enqueue_job_store_job_hash(redis):
