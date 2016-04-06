@@ -1,6 +1,7 @@
+from aiorq.job import utcparse, utcformat, utcnow
 from aiorq.keys import queues_key, queue_key, job_key
-from aiorq.job import utcparse
-from aiorq.protocol import empty_queue, queue_length, enqueue_job
+from aiorq.protocol import empty_queue, queue_length, enqueue_job, dequeue_job
+from aiorq.specs import JobStatus
 
 
 # Queue.
@@ -128,3 +129,32 @@ def test_enqueue_job_set_job_enqueued_at(redis):
     }
     yield from enqueue_job(redis, queue, id, spec)
     utcparse((yield from redis.hget(job_key(id), 'enqueued_at')))
+
+
+# Dequeue job.
+
+
+def test_dequeue_job(redis):
+    """Dequeueing jobs from queues."""
+
+    queue = 'default'
+    id = '2a5079e7-387b-492f-a81c-68aa55c194c8'
+    spec = {
+        'created_at': '2016-04-05T22:40:35Z',
+        'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+        'description': 'fixtures.some_calculation(3, 4, z=2)',
+        'timeout': 180,
+    }
+    yield from enqueue_job(redis, queue, id, spec)
+    result = yield from dequeue_job(redis, queue)
+    assert not (yield from queue_length(redis, queue))
+    assert result == {
+        b'id': id.encode(),
+        b'created_at': b'2016-04-05T22:40:35Z',
+        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+        b'description': b'fixtures.some_calculation(3, 4, z=2)',
+        b'timeout': b'180',
+        b'status': JobStatus.QUEUED.encode(),
+        b'origin': queue.encode(),
+        b'enqueued_at': utcformat(utcnow()),
+    }

@@ -86,8 +86,21 @@ def enqueue_job(redis, queue, id, spec):
 
 
 @asyncio.coroutine
-def dequeue_job(redis):
-    pass
+def dequeue_job(redis, queue):
+    """Dequeue the front-most job from this queue.
+
+    :type redis: `aioredis.Redis`
+    :type queue: str
+
+    """
+
+    job_id = yield from redis.lpop(queue_key(queue))
+    # TODO: test on job_id is None
+    # TODO: make each function of the protocol layer operates on bytes only
+    job = yield from redis.hgetall(job_key(job_id.decode()))
+    job[b'id'] = job_id
+    # TODO: silently pass on NoSuchJobError
+    return job
 
 
 @asyncio.coroutine
