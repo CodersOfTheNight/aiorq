@@ -9,8 +9,10 @@
 """
 
 import asyncio
+import itertools
 
 from .keys import queues_key, queue_key, job_key
+from .specs import JobStatus
 
 
 @asyncio.coroutine
@@ -70,12 +72,13 @@ def enqueue_job(connection, queue, id, spec):
 
     """
 
-    # TODO: set job status to queued.
     multi = connection.multi_exec()
     multi.sadd(queues_key(), queue)
-    fields = (field
-              for item_fields in spec.items()
-              for field in item_fields)
+    spec_fields = (field
+                   for item_fields in spec.items()
+                   for field in item_fields)
+    default_fields = ('status', JobStatus.QUEUED)
+    fields = itertools.chain(spec_fields, default_fields)
     multi.hmset(job_key(id), *fields)
     multi.rpush(queue_key(queue), id)
     yield from multi.execute()
