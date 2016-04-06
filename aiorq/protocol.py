@@ -17,22 +17,22 @@ from .specs import JobStatus
 
 
 @asyncio.coroutine
-def queue_length(connection, name):
+def queue_length(redis, name):
     """Get length of given queue.
 
-    :type connection: `aioredis.Redis`
+    :type redis: `aioredis.Redis`
     :type name: str
 
     """
 
-    return (yield from connection.llen(queue_key(name)))
+    return (yield from redis.llen(queue_key(name)))
 
 
 @asyncio.coroutine
-def empty_queue(connection, name):
+def empty_queue(redis, name):
     """Removes all jobs on the queue.
 
-    :type connection: `aioredis.Redis`
+    :type redis: `aioredis.Redis`
     :type name: str
 
     """
@@ -54,26 +54,26 @@ def empty_queue(connection, name):
         end
         return count
     """
-    return (yield from connection.eval(script, keys=[queue_key(name)]))
+    return (yield from redis.eval(script, keys=[queue_key(name)]))
 
 
 @asyncio.coroutine
-def compact_queue(connection):
+def compact_queue(redis):
     pass
 
 
 @asyncio.coroutine
-def enqueue_job(connection, queue, id, spec):
+def enqueue_job(redis, queue, id, spec):
     """Persists the job specification to it corresponding Redis id.
 
-    :type connection: `aioredis.Redis`
+    :type redis: `aioredis.Redis`
     :type queue: str
     :type id: str
     :type spec: dict
 
     """
 
-    multi = connection.multi_exec()
+    multi = redis.multi_exec()
     multi.sadd(queues_key(), queue)
     default_fields = ('status', JobStatus.QUEUED,
                       'origin', queue,
@@ -86,40 +86,40 @@ def enqueue_job(connection, queue, id, spec):
 
 
 @asyncio.coroutine
-def dequeue_job(connection):
+def dequeue_job(redis):
     pass
 
 
 @asyncio.coroutine
-def remove_job(connection):
+def remove_job(redis):
     pass
 
 
 @asyncio.coroutine
-def quarantine_job(connection):
+def quarantine_job(redis):
     pass
 
 
 @asyncio.coroutine
-def requeue_job(connection):
+def requeue_job(redis):
     pass
 
 
 @asyncio.coroutine
-def cancel_job(connection):
+def cancel_job(redis):
     pass
 
 
 @asyncio.coroutine
-def start_job(connection):
+def start_job(redis):
     pass
 
 
 @asyncio.coroutine
-def finish_job(connection):
+def finish_job(redis):
     pass
 
 
 @asyncio.coroutine
-def fail_job(connection):
+def fail_job(redis):
     pass
