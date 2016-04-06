@@ -11,13 +11,13 @@
 # and released under 2-clause BSD license.
 
 import asyncio
+from datetime import datetime
 
 from rq.compat import as_text, decode_redis_hash
 from rq.job import (Job as SynchronousJob, UNEVALUATED, loads,
                     unpickle, JobStatus)
 from rq.job import dumps        # noqa
 from rq.local import LocalStack
-from rq.utils import utcnow, utcparse
 
 from .connections import resolve_connection
 from .exceptions import NoSuchJobError
@@ -324,9 +324,9 @@ class Job(SynchronousJob):
         try:
             self._result = yield from self.func(*self.args, **self.kwargs)
         finally:
-              # TODO: maybe fucked up since coroutines executed in one
-              # thread simultaneously.  If short coroutine scheduled
-              # later finishes earlier then we will be in the trouble.
+            # TODO: maybe fucked up since coroutines executed in one
+            # thread simultaneously.  If short coroutine scheduled
+            # later finishes earlier then we will be in the trouble.
             assert self.id == _job_stack.pop()
         return self._result
 
@@ -365,3 +365,15 @@ class Job(SynchronousJob):
 
 
 _job_stack = LocalStack()
+
+
+def utcparse(byte):
+    return datetime.strptime(byte.decode(), '%Y-%m-%dT%H:%M:%SZ')
+
+
+def utcformat(dt):
+    return dt.strftime('%Y-%m-%dT%H:%M:%SZ')
+
+
+def utcnow():
+    return datetime.utcnow()

@@ -12,6 +12,7 @@ import asyncio
 import itertools
 
 from .keys import queues_key, queue_key, job_key
+from .job import utcformat, utcnow
 from .specs import JobStatus
 
 
@@ -74,7 +75,9 @@ def enqueue_job(connection, queue, id, spec):
 
     multi = connection.multi_exec()
     multi.sadd(queues_key(), queue)
-    default_fields = ('status', JobStatus.QUEUED)
+    default_fields = ('status', JobStatus.QUEUED,
+                      'origin', queue,
+                      'enqueued_at', utcformat(utcnow()))
     spec_fields = itertools.chain.from_iterable(spec.items())
     fields = itertools.chain(spec_fields, default_fields)
     multi.hmset(job_key(id), *fields)
