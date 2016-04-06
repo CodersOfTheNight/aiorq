@@ -24,9 +24,7 @@ def queue_length(connection, name):
 def empty_queue(connection, name):
     """Removes all jobs on the queue.
 
-    :param connection: Asynchronous redis connection
     :type connection: `aioredis.Redis`
-    :param name: Queue name
     :type name: str
 
     """
@@ -60,24 +58,21 @@ def compact_queue(connection):
 def enqueue_job(connection, queue, id, spec):
     """Persists the job specification to it corresponding Redis id.
 
-    :param connection: Asynchronous redis connection
     :type connection: `aioredis.Redis`
-    :param queue: Queue name
     :type queue: str
-    :param id: Job uuid
     :type id: str
-    :param spec: Job specification
     :type spec: dict
 
     """
 
-    # TODO: add id to the queue, motherfucker!
+    # TODO: set job status to queued.
     multi = connection.multi_exec()
     multi.sadd(queues_key(), queue)
     fields = (field
               for item_fields in spec.items()
               for field in item_fields)
     multi.hmset(job_key(id), *fields)
+    multi.rpush(queue_key(queue), id)
     yield from multi.execute()
 
 
