@@ -15,7 +15,12 @@ from .keys import queues_key, queue_key, job_key
 
 @asyncio.coroutine
 def queue_length(connection, name):
-    """Get length of given queue."""
+    """Get length of given queue.
+
+    :type connection: `aioredis.Redis`
+    :type name: str
+
+    """
 
     return (yield from connection.llen(queue_key(name)))
 
