@@ -74,10 +74,8 @@ def enqueue_job(connection, queue, id, spec):
 
     multi = connection.multi_exec()
     multi.sadd(queues_key(), queue)
-    spec_fields = (field
-                   for item_fields in spec.items()
-                   for field in item_fields)
     default_fields = ('status', JobStatus.QUEUED)
+    spec_fields = itertools.chain.from_iterable(spec.items())
     fields = itertools.chain(spec_fields, default_fields)
     multi.hmset(job_key(id), *fields)
     multi.rpush(queue_key(queue), id)
