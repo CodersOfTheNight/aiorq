@@ -10,26 +10,26 @@ from aiorq.specs import JobStatus
 def test_empty_queue(redis):
     """Emptying queue."""
 
-    yield from redis.rpush(queue_key('example'), 'foo')
-    yield from redis.rpush(queue_key('example'), 'bar')
-    assert (yield from queue_length(redis, 'example'))
-    yield from empty_queue(redis, 'example')
-    assert not (yield from queue_length(redis, 'example'))
+    yield from redis.rpush(queue_key(b'example'), b'foo')
+    yield from redis.rpush(queue_key(b'example'), b'bar')
+    assert (yield from queue_length(redis, b'example'))
+    yield from empty_queue(redis, b'example')
+    assert not (yield from queue_length(redis, b'example'))
 
 
 def test_empty_removes_jobs(redis):
     """Emptying a queue deletes the associated job objects."""
 
-    queue = 'default'
-    id = '2a5079e7-387b-492f-a81c-68aa55c194c8'
+    queue = b'default'
+    id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
     spec = {
-        'created_at': '2016-04-05T22:40:35Z',
-        'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        'description': 'fixtures.some_calculation(3, 4, z=2)',
-        'timeout': 180,
+        b'created_at': b'2016-04-05T22:40:35Z',
+        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+        b'description': b'fixtures.some_calculation(3, 4, z=2)',
+        b'timeout': 180,
     }
     yield from enqueue_job(redis, queue, id, spec)
-    yield from empty_queue(redis, 'default')
+    yield from empty_queue(redis, b'default')
     assert not (yield from redis.exists(job_key(id)))
 
 
@@ -42,29 +42,29 @@ def test_empty_removes_jobs(redis):
 def test_enqueue_job_store_job_hash(redis):
     """Storing jobs."""
 
-    queue = 'default'
-    id = '2a5079e7-387b-492f-a81c-68aa55c194c8'
+    queue = b'default'
+    id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
     spec = {
-        'created_at': '2016-04-05T22:40:35Z',
-        'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        'description': 'fixtures.some_calculation(3, 4, z=2)',
-        'timeout': 180,
+        b'created_at': b'2016-04-05T22:40:35Z',
+        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+        b'description': b'fixtures.some_calculation(3, 4, z=2)',
+        b'timeout': 180,
     }
     yield from enqueue_job(redis, queue, id, spec)
     assert (yield from redis.type(job_key(id))) == b'hash'
-    assert spec['data'] == (yield from redis.hget(job_key(id), 'data'))
+    assert spec[b'data'] == (yield from redis.hget(job_key(id), b'data'))
 
 
 def test_enqueue_job_register_queue(redis):
     """Enqueue job will add its queue into queues storage."""
 
-    queue = 'default'
-    id = '2a5079e7-387b-492f-a81c-68aa55c194c8'
+    queue = b'default'
+    id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
     spec = {
-        'created_at': '2016-04-05T22:40:35Z',
-        'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        'description': 'fixtures.some_calculation(3, 4, z=2)',
-        'timeout': 180,
+        b'created_at': b'2016-04-05T22:40:35Z',
+        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+        b'description': b'fixtures.some_calculation(3, 4, z=2)',
+        b'timeout': 180,
     }
     yield from enqueue_job(redis, queue, id, spec)
     assert (yield from redis.smembers(queues_key())) == [b'default']
@@ -73,13 +73,13 @@ def test_enqueue_job_register_queue(redis):
 def test_enqueue_job_add_job_key_to_the_queue(redis):
     """Enqueue job must add its id to the queue."""
 
-    queue = 'default'
-    id = '2a5079e7-387b-492f-a81c-68aa55c194c8'
+    queue = b'default'
+    id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
     spec = {
-        'created_at': '2016-04-05T22:40:35Z',
-        'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        'description': 'fixtures.some_calculation(3, 4, z=2)',
-        'timeout': 180,
+        b'created_at': b'2016-04-05T22:40:35Z',
+        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+        b'description': b'fixtures.some_calculation(3, 4, z=2)',
+        b'timeout': 180,
     }
     yield from enqueue_job(redis, queue, id, spec)
     queue_content = [b'2a5079e7-387b-492f-a81c-68aa55c194c8']
@@ -89,46 +89,46 @@ def test_enqueue_job_add_job_key_to_the_queue(redis):
 def test_enqueue_job_set_job_status(redis):
     """Enqueue job must set job status to QUEUED."""
 
-    queue = 'default'
-    id = '2a5079e7-387b-492f-a81c-68aa55c194c8'
+    queue = b'default'
+    id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
     spec = {
-        'created_at': '2016-04-05T22:40:35Z',
-        'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        'description': 'fixtures.some_calculation(3, 4, z=2)',
-        'timeout': 180,
+        b'created_at': b'2016-04-05T22:40:35Z',
+        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+        b'description': b'fixtures.some_calculation(3, 4, z=2)',
+        b'timeout': 180,
     }
     yield from enqueue_job(redis, queue, id, spec)
-    assert (yield from redis.hget(job_key(id), 'status')) == b'queued'
+    assert (yield from redis.hget(job_key(id), b'status')) == b'queued'
 
 
 def test_enqueue_job_set_job_origin(redis):
     """Enqueue job must set jobs origin queue."""
 
-    queue = 'default'
-    id = '2a5079e7-387b-492f-a81c-68aa55c194c8'
+    queue = b'default'
+    id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
     spec = {
-        'created_at': '2016-04-05T22:40:35Z',
-        'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        'description': 'fixtures.some_calculation(3, 4, z=2)',
-        'timeout': 180,
+        b'created_at': b'2016-04-05T22:40:35Z',
+        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+        b'description': b'fixtures.some_calculation(3, 4, z=2)',
+        b'timeout': 180,
     }
     yield from enqueue_job(redis, queue, id, spec)
-    assert (yield from redis.hget(job_key(id), 'origin')) == b'default'
+    assert (yield from redis.hget(job_key(id), b'origin')) == b'default'
 
 
 def test_enqueue_job_set_job_enqueued_at(redis):
     """Enqueue job must set enqueued_at time."""
 
-    queue = 'default'
-    id = '2a5079e7-387b-492f-a81c-68aa55c194c8'
+    queue = b'default'
+    id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
     spec = {
-        'created_at': '2016-04-05T22:40:35Z',
-        'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        'description': 'fixtures.some_calculation(3, 4, z=2)',
-        'timeout': 180,
+        b'created_at': b'2016-04-05T22:40:35Z',
+        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+        b'description': b'fixtures.some_calculation(3, 4, z=2)',
+        b'timeout': 180,
     }
     yield from enqueue_job(redis, queue, id, spec)
-    utcparse((yield from redis.hget(job_key(id), 'enqueued_at')))
+    utcparse((yield from redis.hget(job_key(id), b'enqueued_at')))
 
 
 # Dequeue job.
@@ -137,24 +137,24 @@ def test_enqueue_job_set_job_enqueued_at(redis):
 def test_dequeue_job(redis):
     """Dequeueing jobs from queues."""
 
-    queue = 'default'
-    id = '2a5079e7-387b-492f-a81c-68aa55c194c8'
+    queue = b'default'
+    id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
     spec = {
-        'created_at': '2016-04-05T22:40:35Z',
-        'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        'description': 'fixtures.some_calculation(3, 4, z=2)',
-        'timeout': 180,
+        b'created_at': b'2016-04-05T22:40:35Z',
+        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+        b'description': b'fixtures.some_calculation(3, 4, z=2)',
+        b'timeout': 180,
     }
     yield from enqueue_job(redis, queue, id, spec)
     result = yield from dequeue_job(redis, queue)
     assert not (yield from queue_length(redis, queue))
     assert result == {
-        b'id': id.encode(),
+        b'id': id,
         b'created_at': b'2016-04-05T22:40:35Z',
         b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
         b'description': b'fixtures.some_calculation(3, 4, z=2)',
         b'timeout': b'180',
-        b'status': JobStatus.QUEUED.encode(),
-        b'origin': queue.encode(),
+        b'status': JobStatus.QUEUED,
+        b'origin': queue,
         b'enqueued_at': utcformat(utcnow()),
     }

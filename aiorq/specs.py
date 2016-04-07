@@ -11,8 +11,8 @@
 
 class JobStatus:
 
-    QUEUED = 'queued'
-    FINISHED = 'finished'
-    FAILED = 'failed'
-    STARTED = 'started'
-    DEFERRED = 'deferred'
+    QUEUED = b'queued'
+    FINISHED = b'finished'
+    FAILED = b'failed'
+    STARTED = b'started'
+    DEFERRED = b'deferred'

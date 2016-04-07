@@ -12,16 +12,16 @@
 def queues_key():
     """Redis key for all named queues names."""
 
-    return 'rq:queues'
+    return b'rq:queues'
 
 
 def queue_key(name):
     """Redis key for named queue."""
 
-    return 'rq:queue:' + name
+    return b'rq:queue:' + name
 
 
 def job_key(id):
     """Redis key for job hash."""
 
-    return 'rq:job:' + id
+    return b'rq:job:' + id

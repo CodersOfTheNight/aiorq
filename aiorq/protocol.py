@@ -21,7 +21,7 @@ def queue_length(redis, name):
     """Get length of given queue.
 
     :type redis: `aioredis.Redis`
-    :type name: str
+    :type name: bytes
 
     """
 
@@ -33,7 +33,7 @@ def empty_queue(redis, name):
     """Removes all jobs on the queue.
 
     :type redis: `aioredis.Redis`
-    :type name: str
+    :type name: bytes
 
     """
 
@@ -67,17 +67,17 @@ def enqueue_job(redis, queue, id, spec):
     """Persists the job specification to it corresponding Redis id.
 
     :type redis: `aioredis.Redis`
-    :type queue: str
-    :type id: str
+    :type queue: bytes
+    :type id: bytes
     :type spec: dict
 
     """
 
     multi = redis.multi_exec()
     multi.sadd(queues_key(), queue)
-    default_fields = ('status', JobStatus.QUEUED,
-                      'origin', queue,
-                      'enqueued_at', utcformat(utcnow()))
+    default_fields = (b'status', JobStatus.QUEUED,
+                      b'origin', queue,
+                      b'enqueued_at', utcformat(utcnow()))
     spec_fields = itertools.chain.from_iterable(spec.items())
     fields = itertools.chain(spec_fields, default_fields)
     multi.hmset(job_key(id), *fields)
@@ -90,14 +90,13 @@ def dequeue_job(redis, queue):
     """Dequeue the front-most job from this queue.
 
     :type redis: `aioredis.Redis`
-    :type queue: str
+    :type queue: bytes
 
     """
 
     job_id = yield from redis.lpop(queue_key(queue))
     # TODO: test on job_id is None
-    # TODO: make each function of the protocol layer operates on bytes only
-    job = yield from redis.hgetall(job_key(job_id.decode()))
+    job = yield from redis.hgetall(job_key(job_id))
     job[b'id'] = job_id
     # TODO: silently pass on NoSuchJobError
     return job
