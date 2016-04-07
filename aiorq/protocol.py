@@ -106,11 +106,6 @@ def dequeue_job(redis, queue):
 
 
 @asyncio.coroutine
-def remove_job(redis):
-    pass
-
-
-@asyncio.coroutine
 def quarantine_job(redis):
     pass
 
