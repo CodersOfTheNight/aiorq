@@ -165,3 +165,21 @@ def test_dequeue_job(redis):
         b'origin': queue,
         b'enqueued_at': utcformat(utcnow()),
     }
+
+
+def test_dequeue_job_no_such_job(redis):
+    """Silently skip job ids from queue if there is no such job hash."""
+
+    queue = b'default'
+    yield from redis.rpush(queue_key(queue), b'foo')  # Job id without hash.
+
+    id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
+    spec = {
+        b'created_at': b'2016-04-05T22:40:35Z',
+        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+        b'description': b'fixtures.some_calculation(3, 4, z=2)',
+        b'timeout': 180,
+    }
+    yield from enqueue_job(redis, queue, id, spec)
+
+    assert (yield from dequeue_job(redis, queue))[b'id'] == id

@@ -94,13 +94,15 @@ def dequeue_job(redis, queue):
 
     """
 
-    job_id = yield from redis.lpop(queue_key(queue))
-    if not job_id:
-        return
-    job = yield from redis.hgetall(job_key(job_id))
-    job[b'id'] = job_id
-    # TODO: silently pass on NoSuchJobError
-    return job
+    while True:
+        job_id = yield from redis.lpop(queue_key(queue))
+        if not job_id:
+            return
+        job = yield from redis.hgetall(job_key(job_id))
+        if not job:
+            continue
+        job[b'id'] = job_id
+        return job
 
 
 @asyncio.coroutine
