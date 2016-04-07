@@ -134,6 +134,13 @@ def test_enqueue_job_set_job_enqueued_at(redis):
 # Dequeue job.
 
 
+def test_dequeue_job_from_empty_queue(redis):
+    """Nothing happens if there is an empty queue."""
+
+    queue = b'default'
+    assert not (yield from dequeue_job(redis, queue))
+
+
 def test_dequeue_job(redis):
     """Dequeueing jobs from queues."""
 
