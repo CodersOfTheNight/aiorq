@@ -106,18 +106,6 @@ def dequeue_job(redis, queue):
 
 
 @asyncio.coroutine
-def quarantine_job(redis, id):
-    """Puts the given job in failed queue.
-
-    :type redis: `aioredis.Redis`
-    :type id: bytes
-
-    """
-
-    yield from redis.sadd(queues_key(), failed_queue_key())
-
-
-@asyncio.coroutine
 def requeue_job(redis):
     pass
 
@@ -146,5 +134,12 @@ def finish_job(redis):
 
 
 @asyncio.coroutine
-def fail_job(redis):
-    pass
+def fail_job(redis, id):
+    """Puts the given job in failed queue.
+
+    :type redis: `aioredis.Redis`
+    :type id: bytes
+
+    """
+
+    yield from redis.sadd(queues_key(), failed_queue_key())
