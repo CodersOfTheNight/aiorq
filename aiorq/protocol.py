@@ -116,8 +116,16 @@ def requeue_job(redis):
 
 
 @asyncio.coroutine
-def cancel_job(redis):
-    pass
+def cancel_job(redis, queue, id):
+    """Removes job from queue.
+
+    :type redis: `aioredis.Redis`
+    :type queue: bytes
+    :type id: bytes
+
+    """
+
+    yield from redis.lrem(queue_key(queue), 1, id)
 
 
 @asyncio.coroutine

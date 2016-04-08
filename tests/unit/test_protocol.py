@@ -1,6 +1,7 @@
 from aiorq.job import utcparse, utcformat, utcnow
 from aiorq.keys import queues_key, queue_key, job_key
-from aiorq.protocol import empty_queue, queue_length, enqueue_job, dequeue_job
+from aiorq.protocol import (empty_queue, queue_length, enqueue_job,
+                            dequeue_job, cancel_job)
 from aiorq.specs import JobStatus
 
 
@@ -183,3 +184,22 @@ def test_dequeue_job_no_such_job(redis):
     yield from enqueue_job(redis, queue, id, spec)
 
     assert (yield from dequeue_job(redis, queue))[b'id'] == id
+
+
+# Cancel job.
+
+
+def test_cancel_job(redis):
+    """Remove jobs from queue."""
+
+    queue = b'default'
+    id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
+    spec = {
+        b'created_at': b'2016-04-05T22:40:35Z',
+        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+        b'description': b'fixtures.some_calculation(3, 4, z=2)',
+        b'timeout': 180,
+    }
+    yield from enqueue_job(redis, queue, id, spec)
+    yield from cancel_job(redis, queue, id)
+    assert not (yield from queue_length(redis, queue))
