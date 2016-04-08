@@ -5,7 +5,7 @@ from aiorq.protocol import (empty_queue, queue_length, enqueue_job,
 from aiorq.specs import JobStatus
 
 
-# Queue.
+# Empty queue.
 
 
 def test_empty_queue(redis):
@@ -34,7 +34,10 @@ def test_empty_removes_jobs(redis):
     assert not (yield from redis.exists(job_key(id)))
 
 
-# TODO: test `empty_queue` removes job dependents
+# TODO: test `empty_queue` removes job dependents.
+
+
+# Compact queue.
 
 
 # Enqueue job.
@@ -186,16 +189,6 @@ def test_dequeue_job_no_such_job(redis):
     assert (yield from dequeue_job(redis, queue))[b'id'] == id
 
 
-# Fail job.
-
-
-def test_fail_job_registers_failed_queue(redis):
-    """Register failed queue on quarantine job."""
-
-    yield from fail_job(redis, id)
-    assert (yield from redis.smembers(queues_key())) == [failed_queue_key()]
-
-
 # Requeue job.
 
 
@@ -222,3 +215,19 @@ def test_cancel_job(redis):
     yield from enqueue_job(redis, queue, id, spec)
     yield from cancel_job(redis, queue, id)
     assert not (yield from queue_length(redis, queue))
+
+
+# Start job.
+
+
+# Finish job.
+
+
+# Fail job.
+
+
+def test_fail_job_registers_failed_queue(redis):
+    """Register failed queue on quarantine job."""
+
+    yield from fail_job(redis, id)
+    assert (yield from redis.smembers(queues_key())) == [failed_queue_key()]
