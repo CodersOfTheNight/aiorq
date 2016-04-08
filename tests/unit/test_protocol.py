@@ -1,8 +1,19 @@
 from aiorq.job import utcparse, utcformat, utcnow
 from aiorq.keys import queues_key, queue_key, failed_queue_key, job_key
-from aiorq.protocol import (empty_queue, queue_length, enqueue_job,
-                            dequeue_job, cancel_job, fail_job)
+from aiorq.protocol import (queues, empty_queue, queue_length,
+                            enqueue_job, dequeue_job, cancel_job,
+                            fail_job)
 from aiorq.specs import JobStatus
+
+
+# Queues.
+
+
+def test_queues(redis):
+    """All redis queues."""
+
+    yield from redis.sadd(queues_key(), b'default')
+    assert (yield from queues(redis)) == [b'default']
 
 
 # Queue length.
@@ -82,7 +93,7 @@ def test_enqueue_job_register_queue(redis):
         b'timeout': 180,
     }
     yield from enqueue_job(redis, queue, id, spec)
-    assert (yield from redis.smembers(queues_key())) == [b'default']
+    assert (yield from queues(redis)) == [b'default']
 
 
 def test_enqueue_job_add_job_key_to_the_queue(redis):
@@ -187,7 +198,6 @@ def test_dequeue_job_no_such_job(redis):
 
     queue = b'default'
     yield from redis.rpush(queue_key(queue), b'foo')  # Job id without hash.
-
     id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
     spec = {
         b'created_at': b'2016-04-05T22:40:35Z',
@@ -196,7 +206,6 @@ def test_dequeue_job_no_such_job(redis):
         b'timeout': 180,
     }
     yield from enqueue_job(redis, queue, id, spec)
-
     assert (yield from dequeue_job(redis, queue))[b'id'] == id
 
 
@@ -241,4 +250,4 @@ def test_fail_job_registers_failed_queue(redis):
     """Register failed queue on quarantine job."""
 
     yield from fail_job(redis, id)
-    assert (yield from redis.smembers(queues_key())) == [failed_queue_key()]
+    assert (yield from queues(redis)) == [failed_queue_key()]

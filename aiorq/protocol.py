@@ -17,6 +17,13 @@ from .specs import JobStatus
 
 
 @asyncio.coroutine
+def queues(redis):
+    """All RQ queues."""
+
+    return (yield from redis.smembers(queues_key()))
+
+
+@asyncio.coroutine
 def queue_length(redis, name):
     """Get length of given queue.
 
