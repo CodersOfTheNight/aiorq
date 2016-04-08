@@ -11,7 +11,7 @@
 import asyncio
 import itertools
 
-from .keys import queues_key, queue_key, job_key
+from .keys import queues_key, queue_key, failed_queue_key, job_key
 from .job import utcformat, utcnow
 from .specs import JobStatus
 
@@ -106,8 +106,15 @@ def dequeue_job(redis, queue):
 
 
 @asyncio.coroutine
-def quarantine_job(redis):
-    pass
+def quarantine_job(redis, id):
+    """Puts the given job in failed queue.
+
+    :type redis: `aioredis.Redis`
+    :type id: bytes
+
+    """
+
+    yield from redis.sadd(queues_key(), failed_queue_key())
 
 
 @asyncio.coroutine

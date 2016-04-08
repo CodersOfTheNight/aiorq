@@ -8,6 +8,8 @@
     :license: LGPL-3, see LICENSE for more details.
 """
 
+from .specs import JobStatus
+
 
 def queues_key():
     """Redis key for all named queues names."""
@@ -19,6 +21,12 @@ def queue_key(name):
     """Redis key for named queue."""
 
     return b'rq:queue:' + name
+
+
+def failed_queue_key():
+    """Redis key for failed queue."""
+
+    return queue_key(JobStatus.FAILED)
 
 
 def job_key(id):

@@ -1,7 +1,7 @@
 from aiorq.job import utcparse, utcformat, utcnow
-from aiorq.keys import queues_key, queue_key, job_key
+from aiorq.keys import queues_key, queue_key, failed_queue_key, job_key
 from aiorq.protocol import (empty_queue, queue_length, enqueue_job,
-                            dequeue_job, cancel_job)
+                            dequeue_job, cancel_job, quarantine_job)
 from aiorq.specs import JobStatus
 
 
@@ -184,6 +184,25 @@ def test_dequeue_job_no_such_job(redis):
     yield from enqueue_job(redis, queue, id, spec)
 
     assert (yield from dequeue_job(redis, queue))[b'id'] == id
+
+
+# Quarantine job.
+
+
+def test_quarantine_job_registers_failed_queue(redis):
+    """Register failed queue on quarantine job."""
+
+    yield from quarantine_job(redis, id)
+    assert (yield from redis.smembers(queues_key())) == [failed_queue_key()]
+
+
+# Requeue job.
+
+
+def test_requeue_job():
+    """Requeue existing jobs."""
+
+    pass
 
 
 # Cancel job.
