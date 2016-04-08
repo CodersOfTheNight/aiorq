@@ -5,6 +5,17 @@ from aiorq.protocol import (empty_queue, queue_length, enqueue_job,
 from aiorq.specs import JobStatus
 
 
+# Queue length.
+
+
+def test_queue_length(redis):
+    """RQ queue size."""
+
+    yield from redis.rpush(queue_key(b'example'), b'foo')
+    yield from redis.rpush(queue_key(b'example'), b'bar')
+    assert (yield from queue_length(redis, b'example')) == 2
+
+
 # Empty queue.
 
 
