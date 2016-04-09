@@ -187,3 +187,8 @@ def requeue_job(redis, id):
         return
     if not is_failed_job:
         raise InvalidOperationError('Cannot requeue non-failed job')
+    multi = redis.multi_exec()
+    multi.hset(job_key(id), b'status', JobStatus.QUEUED)
+    multi.hdel(job_key(id), b'exc_info')
+    multi.rpush(queue_key(job[b'origin']), id)
+    yield from multi.execute()

@@ -307,10 +307,58 @@ def test_fail_job_sets_exc_info(redis):
 # Requeue job.
 
 
-def test_requeue_job():
-    """Requeue existing jobs."""
+def test_requeue_job_set_status(redis):
+    """Requeue existing job set corresponding job status."""
 
-    pass
+    queue = b'default'
+    id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
+    spec = {
+        b'created_at': b'2016-04-05T22:40:35Z',
+        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+        b'description': b'fixtures.some_calculation(3, 4, z=2)',
+        b'timeout': 180,
+    }
+    yield from enqueue_job(redis, queue, id, spec)
+    yield from dequeue_job(redis, queue)
+    yield from fail_job(redis, id, b"Exception('We are here')")
+    yield from requeue_job(redis, id)
+    assert (yield from redis.hget(job_key(id), b'status')) == JobStatus.QUEUED
+
+
+def test_requeue_job_clean_exc_info(redis):
+    """Requeue existing job cleanup exception information."""
+
+    queue = b'default'
+    id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
+    spec = {
+        b'created_at': b'2016-04-05T22:40:35Z',
+        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+        b'description': b'fixtures.some_calculation(3, 4, z=2)',
+        b'timeout': 180,
+    }
+    yield from enqueue_job(redis, queue, id, spec)
+    yield from dequeue_job(redis, queue)
+    yield from fail_job(redis, id, b"Exception('We are here')")
+    yield from requeue_job(redis, id)
+    assert not (yield from redis.hget(job_key(id), b'exc_info'))
+
+
+def test_requeue_job_enqueue_into_origin(redis):
+    """Requeue existing job puts it into jobs origin queue."""
+
+    queue = b'default'
+    id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
+    spec = {
+        b'created_at': b'2016-04-05T22:40:35Z',
+        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+        b'description': b'fixtures.some_calculation(3, 4, z=2)',
+        b'timeout': 180,
+    }
+    yield from enqueue_job(redis, queue, id, spec)
+    yield from dequeue_job(redis, queue)
+    yield from fail_job(redis, id, b"Exception('We are here')")
+    yield from requeue_job(redis, id)
+    assert id in (yield from jobs(redis, queue))
 
 
 def test_requeue_job_removes_non_existing_job(redis):
