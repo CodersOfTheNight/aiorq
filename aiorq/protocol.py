@@ -129,11 +129,6 @@ def dequeue_job(redis, queue):
 
 
 @asyncio.coroutine
-def requeue_job(redis):
-    pass
-
-
-@asyncio.coroutine
 def cancel_job(redis, queue, id):
     """Removes job from queue.
 
@@ -173,3 +168,17 @@ def fail_job(redis, id, exc_info):
               b'exc_info', exc_info)
     multi.hmset(job_key(id), *fields)
     yield from multi.execute()
+
+
+@asyncio.coroutine
+def requeue_job(redis, id):
+    """Requeue job with the given job ID.
+
+    :type redis: `aioredis.Redis`
+    :type id: bytes
+
+    """
+
+    job = yield from redis.hgetall(job_key(id))
+    if not job:
+        yield from redis.lrem(failed_queue_key(), 1, id)

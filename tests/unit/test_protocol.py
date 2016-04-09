@@ -2,7 +2,7 @@ from aiorq.job import utcparse, utcformat, utcnow
 from aiorq.keys import queues_key, queue_key, failed_queue_key, job_key
 from aiorq.protocol import (queues, jobs, empty_queue, queue_length,
                             enqueue_job, dequeue_job, cancel_job,
-                            fail_job)
+                            fail_job, requeue_job)
 from aiorq.specs import JobStatus
 
 
@@ -223,15 +223,6 @@ def test_dequeue_job_no_such_job(redis):
     assert (yield from dequeue_job(redis, queue))[b'id'] == id
 
 
-# Requeue job.
-
-
-def test_requeue_job():
-    """Requeue existing jobs."""
-
-    pass
-
-
 # Cancel job.
 
 
@@ -292,3 +283,23 @@ def test_fail_job_sets_exc_info(redis):
     yield from fail_job(redis, id, b"Exception('We are here')")
     exc_info = yield from redis.hget(job_key(id), b'exc_info')
     assert exc_info == b"Exception('We are here')"
+
+
+# Requeue job.
+
+
+def test_requeue_job():
+    """Requeue existing jobs."""
+
+    pass
+
+
+def test_requeue_job_removes_non_existing_job(redis):
+    """Requeue job removes job id from the failed queue if job doesn't
+    exists anymore.
+    """
+
+    id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
+    yield from redis.rpush(failed_queue_key(), id)
+    yield from requeue_job(redis, id)
+    assert not (yield from jobs(redis, b'failed'))
