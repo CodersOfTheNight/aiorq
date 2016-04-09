@@ -1,3 +1,6 @@
+import pytest
+
+from aiorq.exceptions import InvalidOperationError
 from aiorq.job import utcparse, utcformat, utcnow
 from aiorq.keys import queues_key, queue_key, failed_queue_key, job_key
 from aiorq.protocol import (queues, jobs, empty_queue, queue_length,
@@ -303,3 +306,19 @@ def test_requeue_job_removes_non_existing_job(redis):
     yield from redis.rpush(failed_queue_key(), id)
     yield from requeue_job(redis, id)
     assert not (yield from jobs(redis, b'failed'))
+
+
+def test_requeue_job_error_on_non_failed_job(redis):
+    """Throw error if anyone tries to requeue non failed job."""
+
+    queue = b'default'
+    id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
+    spec = {
+        b'created_at': b'2016-04-05T22:40:35Z',
+        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+        b'description': b'fixtures.some_calculation(3, 4, z=2)',
+        b'timeout': 180,
+    }
+    yield from enqueue_job(redis, queue, id, spec)
+    with pytest.raises(InvalidOperationError):
+        yield from requeue_job(redis, id)

@@ -11,6 +11,7 @@
 import asyncio
 import itertools
 
+from .exceptions import InvalidOperationError
 from .keys import queues_key, queue_key, failed_queue_key, job_key
 from .job import utcformat, utcnow
 from .specs import JobStatus
@@ -180,5 +181,8 @@ def requeue_job(redis, id):
     """
 
     job = yield from redis.hgetall(job_key(id))
+    is_failed_job = yield from redis.lrem(failed_queue_key(), 1, id)
     if not job:
-        yield from redis.lrem(failed_queue_key(), 1, id)
+        return
+    if not is_failed_job:
+        raise InvalidOperationError('Cannot requeue non-failed job')

@@ -13,6 +13,12 @@
 from rq.exceptions import *     # noqa
 
 
+class InvalidOperationError(Exception):
+    """Inappropriate job action error."""
+
+    pass
+
+
 class JobTimeoutException(Exception):
     """Error signify that coroutine is not finished in time."""
 
