@@ -1,6 +1,6 @@
 from aiorq.job import utcparse, utcformat, utcnow
 from aiorq.keys import queues_key, queue_key, failed_queue_key, job_key
-from aiorq.protocol import (queues, empty_queue, queue_length,
+from aiorq.protocol import (queues, jobs, empty_queue, queue_length,
                             enqueue_job, dequeue_job, cancel_job,
                             fail_job)
 from aiorq.specs import JobStatus
@@ -14,6 +14,20 @@ def test_queues(redis):
 
     yield from redis.sadd(queues_key(), b'default')
     assert (yield from queues(redis)) == [b'default']
+
+
+# Jobs.
+
+
+def test_jobs(redis):
+    """All queue jobs."""
+
+    yield from redis.rpush(queue_key(b'default'), b'foo')
+    yield from redis.rpush(queue_key(b'default'), b'bar')
+    assert set((yield from jobs(redis, b'default'))) == {b'foo', b'bar'}
+
+
+# TODO: offset and length arguments.
 
 
 # Queue length.
@@ -249,5 +263,14 @@ def test_cancel_job(redis):
 def test_fail_job_registers_failed_queue(redis):
     """Register failed queue on quarantine job."""
 
+    id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
     yield from fail_job(redis, id)
     assert (yield from queues(redis)) == [failed_queue_key()]
+
+
+def test_fail_job_enqueue_put_into_faileld_queue(redis):
+    """Failed job appears in the failed queue."""
+
+    id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
+    yield from fail_job(redis, id)
+    assert id in (yield from jobs(redis, b'failed'))

@@ -18,9 +18,25 @@ from .specs import JobStatus
 
 @asyncio.coroutine
 def queues(redis):
-    """All RQ queues."""
+    """All RQ queues.
+
+    :type redis: `aioredis.Redis`
+
+    """
 
     return (yield from redis.smembers(queues_key()))
+
+
+@asyncio.coroutine
+def jobs(redis, queue):
+    """All queue jobs.
+
+    :type redis: `aioredis.Redis`
+    :type queue: bytes
+
+    """
+
+    return (yield from redis.lrange(queue_key(queue), 0, -1))
 
 
 @asyncio.coroutine
@@ -149,4 +165,7 @@ def fail_job(redis, id):
 
     """
 
-    yield from redis.sadd(queues_key(), failed_queue_key())
+    multi = redis.multi_exec()
+    multi.sadd(queues_key(), failed_queue_key())
+    multi.rpush(failed_queue_key(), id)
+    yield from multi.execute()
