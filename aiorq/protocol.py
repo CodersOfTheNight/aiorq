@@ -157,16 +157,19 @@ def finish_job(redis):
 
 
 @asyncio.coroutine
-def fail_job(redis, id):
+def fail_job(redis, id, exc_info):
     """Puts the given job in failed queue.
 
     :type redis: `aioredis.Redis`
     :type id: bytes
+    :type exc_info: bytes
 
     """
 
     multi = redis.multi_exec()
     multi.sadd(queues_key(), failed_queue_key())
     multi.rpush(failed_queue_key(), id)
-    multi.hset(job_key(id), b'ended_at', utcformat(utcnow()))
+    fields = (b'ended_at', utcformat(utcnow()),
+              b'exc_info', exc_info)
+    multi.hmset(job_key(id), *fields)
     yield from multi.execute()
