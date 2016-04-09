@@ -274,3 +274,12 @@ def test_fail_job_enqueue_put_into_faileld_queue(redis):
     id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
     yield from fail_job(redis, id)
     assert id in (yield from jobs(redis, b'failed'))
+
+
+def test_fail_job_sets_ended_at(redis):
+    """Failed job should have ended at time."""
+
+    id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
+    yield from fail_job(redis, id)
+    ended_at = yield from redis.hget(job_key(id), b'ended_at')
+    assert ended_at == utcformat(utcnow())

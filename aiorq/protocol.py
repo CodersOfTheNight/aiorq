@@ -168,4 +168,5 @@ def fail_job(redis, id):
     multi = redis.multi_exec()
     multi.sadd(queues_key(), failed_queue_key())
     multi.rpush(failed_queue_key(), id)
+    multi.hset(job_key(id), b'ended_at', utcformat(utcnow()))
     yield from multi.execute()
