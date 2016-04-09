@@ -165,7 +165,8 @@ def fail_job(redis, id, exc_info):
     multi = redis.multi_exec()
     multi.sadd(queues_key(), failed_queue_key())
     multi.rpush(failed_queue_key(), id)
-    fields = (b'ended_at', utcformat(utcnow()),
+    fields = (b'status', JobStatus.FAILED,
+              b'ended_at', utcformat(utcnow()),
               b'exc_info', exc_info)
     multi.hmset(job_key(id), *fields)
     yield from multi.execute()
