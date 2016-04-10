@@ -188,7 +188,11 @@ def finish_job(redis, id):
 
     """
 
-    yield from redis.hset(job_key(id), b'ended_at', utcformat(utcnow()))
+    fields = (b'status', JobStatus.FINISHED,
+              b'ended_at', utcformat(utcnow()))
+    multi = redis.multi_exec()
+    multi.hmset(job_key(id), *fields)
+    yield from multi.execute()
 
 
 @asyncio.coroutine
