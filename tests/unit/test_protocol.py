@@ -309,9 +309,9 @@ def test_finish_job_sets_ended_at(redis):
         b'timeout': 180,
     }
     yield from enqueue_job(redis, queue, id, spec)
-    yield from dequeue_job(redis, queue)
+    stored_spec = yield from dequeue_job(redis, queue)
     yield from start_job(redis, queue, id)
-    yield from finish_job(redis, id)
+    yield from finish_job(redis, id, stored_spec)
     ended_at = yield from redis.hget(job_key(id), b'ended_at')
     assert ended_at == utcformat(utcnow())
 
@@ -328,15 +328,89 @@ def test_finish_job_sets_corresponding_status(redis):
         b'timeout': 180,
     }
     yield from enqueue_job(redis, queue, id, spec)
-    yield from dequeue_job(redis, queue)
+    stored_spec = yield from dequeue_job(redis, queue)
     yield from start_job(redis, queue, id)
-    yield from finish_job(redis, id)
+    yield from finish_job(redis, id, stored_spec)
     status = yield from redis.hget(job_key(id), b'status')
     assert status == JobStatus.FINISHED
 
 
+def test_finish_job_sets_results_ttl(redis):
+    """Finish job sets results TTL."""
+
+    queue = b'default'
+    id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
+    spec = {
+        b'created_at': b'2016-04-05T22:40:35Z',
+        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+        b'description': b'fixtures.some_calculation(3, 4, z=2)',
+        b'timeout': 180,
+    }
+    yield from enqueue_job(redis, queue, id, spec)
+    stored_spec = yield from dequeue_job(redis, queue)
+    yield from start_job(redis, queue, id)
+    yield from finish_job(redis, id, stored_spec)
+    assert (yield from redis.ttl(job_key(id))) == 500
+
+
+def test_finish_job_use_custom_ttl(redis):
+    """Finish job sets custom results TTL."""
+
+    queue = b'default'
+    id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
+    spec = {
+        b'created_at': b'2016-04-05T22:40:35Z',
+        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+        b'description': b'fixtures.some_calculation(3, 4, z=2)',
+        b'timeout': 180,
+        b'result_ttl': 5000,
+    }
+    yield from enqueue_job(redis, queue, id, spec)
+    stored_spec = yield from dequeue_job(redis, queue)
+    yield from start_job(redis, queue, id)
+    yield from finish_job(redis, id, stored_spec)
+    assert (yield from redis.ttl(job_key(id))) == 5000
+
+
+def test_finish_job_remove_results_zero_ttl(redis):
+    """Finish job removes jobs with zero TTL."""
+
+    queue = b'default'
+    id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
+    spec = {
+        b'created_at': b'2016-04-05T22:40:35Z',
+        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+        b'description': b'fixtures.some_calculation(3, 4, z=2)',
+        b'timeout': 180,
+        b'result_ttl': 0,
+    }
+    yield from enqueue_job(redis, queue, id, spec)
+    stored_spec = yield from dequeue_job(redis, queue)
+    yield from start_job(redis, queue, id)
+    yield from finish_job(redis, id, stored_spec)
+    assert not (yield from redis.exists(job_key(id)))
+
+
+def test_finish_job_non_expired_job(redis):
+    """Finish job persist non expired job."""
+
+    queue = b'default'
+    id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
+    spec = {
+        b'created_at': b'2016-04-05T22:40:35Z',
+        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+        b'description': b'fixtures.some_calculation(3, 4, z=2)',
+        b'timeout': 180,
+        b'result_ttl': None,
+    }
+    yield from enqueue_job(redis, queue, id, spec)
+    stored_spec = yield from dequeue_job(redis, queue)
+    yield from start_job(redis, queue, id)
+    yield from finish_job(redis, id, stored_spec)
+    assert (yield from redis.ttl(job_key(id))) == -1
+
+
 # TODO: worker status, current_job and heartbeat
-# TODO: result ttl
 # TODO: add to finished registry
 # TODO: remove from started registry
 # TODO: process dependents keys

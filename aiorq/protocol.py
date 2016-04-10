@@ -112,13 +112,15 @@ def enqueue_job(redis, queue, id, spec):
 
     """
 
-    multi = redis.multi_exec()
-    multi.sadd(queues_key(), queue)
+    if b'result_ttl' in spec and spec[b'result_ttl'] is None:
+        spec[b'result_ttl'] = -1
     default_fields = (b'status', JobStatus.QUEUED,
                       b'origin', queue,
                       b'enqueued_at', utcformat(utcnow()))
     spec_fields = itertools.chain.from_iterable(spec.items())
     fields = itertools.chain(spec_fields, default_fields)
+    multi = redis.multi_exec()
+    multi.sadd(queues_key(), queue)
     multi.hmset(job_key(id), *fields)
     multi.rpush(queue_key(queue), id)
     yield from multi.execute()
@@ -180,18 +182,30 @@ def start_job(redis, queue, id):
 
 
 @asyncio.coroutine
-def finish_job(redis, id):
+def finish_job(redis, id, spec):
     """Finish given job.
 
     :type redis: `aioredis.Redis`
     :type id: bytes
+    :type spec: dict
 
     """
 
+    if b'result_ttl' not in spec:
+        result_ttl = 500
+    elif spec[b'result_ttl'] == b'0':
+        yield from redis.delete(job_key(id))
+        return
+    else:
+        result_ttl = int(spec[b'result_ttl'])
     fields = (b'status', JobStatus.FINISHED,
               b'ended_at', utcformat(utcnow()))
     multi = redis.multi_exec()
     multi.hmset(job_key(id), *fields)
+    if result_ttl == -1:
+        multi.persist(job_key(id))
+    else:
+        multi.expire(job_key(id), result_ttl)
     yield from multi.execute()
 
 
