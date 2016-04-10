@@ -3,9 +3,10 @@ import pytest
 from aiorq.exceptions import InvalidOperationError
 from aiorq.job import utcparse, utcformat, utcnow
 from aiorq.keys import queues_key, queue_key, failed_queue_key, job_key
-from aiorq.protocol import (queues, jobs, empty_queue, queue_length,
-                            enqueue_job, dequeue_job, cancel_job,
-                            start_job, fail_job, requeue_job)
+from aiorq.protocol import (queues, jobs, started_jobs, empty_queue,
+                            queue_length, enqueue_job, dequeue_job,
+                            cancel_job, start_job, fail_job,
+                            requeue_job)
 from aiorq.specs import JobStatus
 
 
@@ -251,18 +252,29 @@ def test_cancel_job(redis):
 def test_start_job_sets_job_status(redis):
     """Start job sets corresponding job status."""
 
+    queue = b'default'
     id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
-    yield from start_job(redis, id)
+    yield from start_job(redis, queue, id)
     assert (yield from redis.hget(job_key(id), b'status')) == JobStatus.STARTED
 
 
 def test_start_job_sets_started_time(redis):
     """Start job sets it started at time."""
 
+    queue = b'default'
     id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
-    yield from start_job(redis, id)
+    yield from start_job(redis, queue, id)
     started_at = yield from redis.hget(job_key(id), b'started_at')
     assert started_at == utcformat(utcnow())
+
+
+def test_start_job_add_job_to_registry(redis):
+    """Start job will add it to started job registry."""
+
+    queue = b'default'
+    id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
+    yield from start_job(redis, queue, id)
+    assert (yield from started_jobs(redis, queue)) == [id]
 
 
 # Finish job.

@@ -33,3 +33,9 @@ def job_key(id):
     """Redis key for job hash."""
 
     return b'rq:job:' + id
+
+
+def started_registry(queue):
+    """Redis key for started job registry."""
+
+    return b'rq:wip:' + queue

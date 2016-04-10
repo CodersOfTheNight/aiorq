@@ -12,9 +12,11 @@ import asyncio
 import itertools
 
 from .exceptions import InvalidOperationError
-from .keys import queues_key, queue_key, failed_queue_key, job_key
+from .keys import (queues_key, queue_key, failed_queue_key, job_key,
+                   started_registry)
 from .job import utcformat, utcnow
 from .specs import JobStatus
+from .utils import current_timestamp
 
 
 @asyncio.coroutine
@@ -38,6 +40,19 @@ def jobs(redis, queue):
     """
 
     return (yield from redis.lrange(queue_key(queue), 0, -1))
+
+
+@asyncio.coroutine
+def started_jobs(redis, queue):
+    """All started jobs from this queue.
+
+    :type redis: `aioredis.Redis`
+    :type queue: bytes
+
+    """
+
+    # TODO: start and end arguments.
+    return (yield from redis.zrange(started_registry(queue), 0, -1))
 
 
 @asyncio.coroutine
@@ -143,17 +158,23 @@ def cancel_job(redis, queue, id):
 
 
 @asyncio.coroutine
-def start_job(redis, id):
+def start_job(redis, queue, id):
     """Start given job.
 
     :type redis: `aioredis.Redis`
+    :type queue: bytes
     :type id: bytes
 
     """
 
     fields = (b'status', JobStatus.STARTED,
               b'started_at', utcformat(utcnow()))
-    yield from redis.hmset(job_key(id), *fields)
+    # TODO: TTL argument for registry
+    score = current_timestamp()
+    multi = redis.multi_exec()
+    multi.hmset(job_key(id), *fields)
+    multi.zadd(started_registry(queue), score, id)
+    yield from multi.execute()
 
 
 @asyncio.coroutine
