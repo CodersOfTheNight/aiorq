@@ -180,8 +180,15 @@ def start_job(redis, queue, id):
 
 
 @asyncio.coroutine
-def finish_job(redis):
-    pass
+def finish_job(redis, id):
+    """Finish given job.
+
+    :type redis: `aioredis.Redis`
+    :type id: bytes
+
+    """
+
+    yield from redis.hset(job_key(id), b'ended_at', utcformat(utcnow()))
 
 
 @asyncio.coroutine

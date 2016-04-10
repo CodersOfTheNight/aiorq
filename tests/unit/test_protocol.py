@@ -5,8 +5,8 @@ from aiorq.job import utcparse, utcformat, utcnow
 from aiorq.keys import queues_key, queue_key, failed_queue_key, job_key
 from aiorq.protocol import (queues, jobs, started_jobs, empty_queue,
                             queue_length, enqueue_job, dequeue_job,
-                            cancel_job, start_job, fail_job,
-                            requeue_job)
+                            cancel_job, start_job, finish_job,
+                            fail_job, requeue_job)
 from aiorq.specs import JobStatus
 
 
@@ -295,6 +295,33 @@ def test_start_job_persist_job(redis):
 
 
 # Finish job.
+
+
+def test_finish_job_sets_ended_at(redis):
+    """Finish job sets ended at field."""
+
+    queue = b'default'
+    id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
+    spec = {
+        b'created_at': b'2016-04-05T22:40:35Z',
+        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+        b'description': b'fixtures.some_calculation(3, 4, z=2)',
+        b'timeout': 180,
+    }
+    yield from enqueue_job(redis, queue, id, spec)
+    yield from dequeue_job(redis, queue)
+    yield from start_job(redis, queue, id)
+    yield from finish_job(redis, id)
+    ended_at = yield from redis.hget(job_key(id), b'ended_at')
+    assert ended_at == utcformat(utcnow())
+
+
+# TODO: worker status, current_job and heartbeat
+# TODO: result ttl
+# TODO: status == finished
+# TODO: add to finished registry
+# TODO: remove from started registry
+# TODO: process dependents keys
 
 
 # Fail job.
