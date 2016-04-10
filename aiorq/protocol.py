@@ -151,7 +151,9 @@ def start_job(redis, id):
 
     """
 
-    yield from redis.hset(job_key(id), b'status', JobStatus.STARTED)
+    fields = (b'status', JobStatus.STARTED,
+              b'started_at', utcformat(utcnow()))
+    yield from redis.hmset(job_key(id), *fields)
 
 
 @asyncio.coroutine

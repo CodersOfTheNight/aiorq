@@ -256,6 +256,15 @@ def test_start_job_sets_job_status(redis):
     assert (yield from redis.hget(job_key(id), b'status')) == JobStatus.STARTED
 
 
+def test_start_job_sets_started_time(redis):
+    """Start job sets it started at time."""
+
+    id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
+    yield from start_job(redis, id)
+    started_at = yield from redis.hget(job_key(id), b'started_at')
+    assert started_at == utcformat(utcnow())
+
+
 # Finish job.
 
 
