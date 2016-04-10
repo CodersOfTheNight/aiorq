@@ -143,8 +143,15 @@ def cancel_job(redis, queue, id):
 
 
 @asyncio.coroutine
-def start_job(redis):
-    pass
+def start_job(redis, id):
+    """Start given job.
+
+    :type redis: `aioredis.Redis`
+    :type id: bytes
+
+    """
+
+    yield from redis.hset(job_key(id), b'status', JobStatus.STARTED)
 
 
 @asyncio.coroutine

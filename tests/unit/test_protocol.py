@@ -5,7 +5,7 @@ from aiorq.job import utcparse, utcformat, utcnow
 from aiorq.keys import queues_key, queue_key, failed_queue_key, job_key
 from aiorq.protocol import (queues, jobs, empty_queue, queue_length,
                             enqueue_job, dequeue_job, cancel_job,
-                            fail_job, requeue_job)
+                            start_job, fail_job, requeue_job)
 from aiorq.specs import JobStatus
 
 
@@ -246,6 +246,14 @@ def test_cancel_job(redis):
 
 
 # Start job.
+
+
+def test_start_job_sets_job_status(redis):
+    """Start job sets corresponding job status."""
+
+    id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
+    yield from start_job(redis, id)
+    assert (yield from redis.hget(job_key(id), b'status')) == JobStatus.STARTED
 
 
 # Finish job.
