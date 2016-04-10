@@ -171,9 +171,11 @@ def start_job(redis, queue, id):
               b'started_at', utcformat(utcnow()))
     # TODO: TTL argument for registry
     score = current_timestamp()
+    # TODO: worker state, current job and heartbeat.
     multi = redis.multi_exec()
     multi.hmset(job_key(id), *fields)
     multi.zadd(started_registry(queue), score, id)
+    multi.persist(job_key(id))
     yield from multi.execute()
 
 
