@@ -31,28 +31,31 @@ def queues(redis):
 
 
 @asyncio.coroutine
-def jobs(redis, queue):
+def jobs(redis, queue, start=0, end=-1):
     """All queue jobs.
 
     :type redis: `aioredis.Redis`
     :type queue: bytes
+    :type start: int
+    :type end: int
 
     """
 
-    return (yield from redis.lrange(queue_key(queue), 0, -1))
+    return (yield from redis.lrange(queue_key(queue), start, end))
 
 
 @asyncio.coroutine
-def started_jobs(redis, queue):
+def started_jobs(redis, queue, start=0, end=-1):
     """All started jobs from this queue.
 
     :type redis: `aioredis.Redis`
     :type queue: bytes
+    :type start: int
+    :type end: int
 
     """
 
-    # TODO: start and end arguments.
-    return (yield from redis.zrange(started_registry(queue), 0, -1))
+    return (yield from redis.zrange(started_registry(queue), start, end))
 
 
 @asyncio.coroutine

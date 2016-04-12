@@ -2,7 +2,8 @@ import pytest
 
 from aiorq.exceptions import InvalidOperationError
 from aiorq.job import utcparse, utcformat, utcnow
-from aiorq.keys import queues_key, queue_key, failed_queue_key, job_key
+from aiorq.keys import (queues_key, queue_key, failed_queue_key,
+                        job_key, started_registry)
 from aiorq.protocol import (queues, jobs, started_jobs, empty_queue,
                             queue_length, enqueue_job, dequeue_job,
                             cancel_job, start_job, finish_job,
@@ -26,12 +27,40 @@ def test_queues(redis):
 def test_jobs(redis):
     """All queue jobs."""
 
-    yield from redis.rpush(queue_key(b'default'), b'foo')
-    yield from redis.rpush(queue_key(b'default'), b'bar')
-    assert set((yield from jobs(redis, b'default'))) == {b'foo', b'bar'}
+    queue = b'default'
+    yield from redis.rpush(queue_key(queue), b'foo')
+    yield from redis.rpush(queue_key(queue), b'bar')
+    assert set((yield from jobs(redis, queue))) == {b'foo', b'bar'}
 
 
-# TODO: offset and length arguments.
+def test_jobs_args(redis):
+    """Test jobs behavior with limit and offset arguments."""
+
+    queue = b'default'
+    yield from redis.rpush(queue_key(queue), b'foo')
+    yield from redis.rpush(queue_key(queue), b'bar')
+    assert set((yield from jobs(redis, queue, 0, 0))) == {b'foo'}
+
+
+# Started jobs.
+
+
+def test_started_jobs(redis):
+    """All started jobs from this queue."""
+
+    queue = b'default'
+    yield from redis.zadd(started_registry(queue), 1, b'foo')
+    yield from redis.zadd(started_registry(queue), 2, b'bar')
+    assert set((yield from started_jobs(redis, queue))) == {b'foo', b'bar'}
+
+
+def test_started_jobs_args(redis):
+    """All started jobs from this queue."""
+
+    queue = b'default'
+    yield from redis.zadd(started_registry(queue), 1, b'foo')
+    yield from redis.zadd(started_registry(queue), 2, b'bar')
+    assert set((yield from started_jobs(redis, queue, 0, 0))) == {b'foo'}
 
 
 # Queue length.
