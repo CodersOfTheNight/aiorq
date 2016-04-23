@@ -13,7 +13,7 @@ import itertools
 
 from .exceptions import InvalidOperationError
 from .keys import (queues_key, queue_key, failed_queue_key, job_key,
-                   started_registry, finished_registry)
+                   started_registry, finished_registry, deferred_registry)
 from .job import utcformat, utcnow
 from .specs import JobStatus
 from .utils import current_timestamp
@@ -71,6 +71,21 @@ def finished_jobs(redis, queue, start=0, end=-1):
     """
 
     return (yield from redis.zrange(finished_registry(queue), start, end))
+
+
+@asyncio.coroutine
+def deferred_jobs(redis, queue, start=0, end=-1):
+    """All deferred jobs from this queue.  Jobs are waiting for another
+    job to finish in this registry.
+
+    :type redis: `aioredis.Redis`
+    :type queue: bytes
+    :type start: int
+    :type end: int
+
+    """
+
+    return (yield from redis.zrange(deferred_registry(queue), start, end))
 
 
 @asyncio.coroutine

@@ -45,3 +45,9 @@ def finished_registry(queue):
     """Redis key for finished job registry."""
 
     return b'rq:finished:' + queue
+
+
+def deferred_registry(queue):
+    """Redis key for deferred job registry."""
+
+    return b'rq:deferred:' + queue

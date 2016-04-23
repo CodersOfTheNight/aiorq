@@ -3,11 +3,13 @@ import pytest
 from aiorq.exceptions import InvalidOperationError
 from aiorq.job import utcparse, utcformat, utcnow
 from aiorq.keys import (queues_key, queue_key, failed_queue_key,
-                        job_key, started_registry, finished_registry)
+                        job_key, started_registry, finished_registry,
+                        deferred_registry)
 from aiorq.protocol import (queues, jobs, started_jobs, finished_jobs,
-                            empty_queue, queue_length, enqueue_job,
-                            dequeue_job, cancel_job, start_job,
-                            finish_job, fail_job, requeue_job)
+                            deferred_jobs, empty_queue, queue_length,
+                            enqueue_job, dequeue_job, cancel_job,
+                            start_job, finish_job, fail_job,
+                            requeue_job)
 from aiorq.specs import JobStatus
 
 
@@ -82,6 +84,27 @@ def test_finished_jobs_args(redis):
     yield from redis.zadd(finished_registry(queue), 1, b'foo')
     yield from redis.zadd(finished_registry(queue), 2, b'bar')
     assert set((yield from finished_jobs(redis, queue, 0, 0))) == {b'foo'}
+
+
+# Deferred jobs.
+
+
+def test_deferred_jobs(redis):
+    """All jobs that are waiting for another job to finish."""
+
+    queue = b'default'
+    yield from redis.zadd(deferred_registry(queue), 1, b'foo')
+    yield from redis.zadd(deferred_registry(queue), 2, b'bar')
+    assert set((yield from deferred_jobs(redis, queue))) == {b'foo', b'bar'}
+
+
+def test_deferred_jobs_args(redis):
+    """All deferred jobs from this queue limited by arguments."""
+
+    queue = b'default'
+    yield from redis.zadd(deferred_registry(queue), 1, b'foo')
+    yield from redis.zadd(deferred_registry(queue), 2, b'bar')
+    assert set((yield from deferred_jobs(redis, queue, 0, 0))) == {b'foo'}
 
 
 # Queue length.
