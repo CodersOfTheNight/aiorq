@@ -509,7 +509,8 @@ class Worker:
     @asyncio.coroutine
     def get_current_job_id(self):
 
-        return as_text((yield from self.connection.hget(self.key, 'current_job')))
+        current_job = yield from self.connection.hget(self.key, 'current_job')
+        return as_text(current_job)
 
     @asyncio.coroutine
     def get_current_job(self):
