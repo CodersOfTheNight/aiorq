@@ -39,3 +39,9 @@ def started_registry(queue):
     """Redis key for started job registry."""
 
     return b'rq:wip:' + queue
+
+
+def finished_registry(queue):
+    """Redis key for finished job registry."""
+
+    return b'rq:finished:' + queue

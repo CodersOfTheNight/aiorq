@@ -13,7 +13,7 @@ import itertools
 
 from .exceptions import InvalidOperationError
 from .keys import (queues_key, queue_key, failed_queue_key, job_key,
-                   started_registry)
+                   started_registry, finished_registry)
 from .job import utcformat, utcnow
 from .specs import JobStatus
 from .utils import current_timestamp
@@ -56,6 +56,21 @@ def started_jobs(redis, queue, start=0, end=-1):
     """
 
     return (yield from redis.zrange(started_registry(queue), start, end))
+
+
+@asyncio.coroutine
+def finished_jobs(redis, queue, start=0, end=-1):
+    """All finished jobs from this queue.  Jobs are added to this registry
+    after they have successfully completed for monitoring purposes.
+
+    :type redis: `aioredis.Redis`
+    :type queue: bytes
+    :type start: int
+    :type end: int
+
+    """
+
+    return (yield from redis.zrange(finished_registry(queue), start, end))
 
 
 @asyncio.coroutine
