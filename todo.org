@@ -3,6 +3,26 @@
 ** extract protocol layer
    We can't use connection pull *and* pipelines without explicit entry points.
 
+*** job_status
+
+*** set_job_status
+
+*** job_result
+
+*** dependents
+
+**** delete
+
+**** deferred
+
+**** queue empty
+
+**** enqueue
+
+*** worker_birth (start worker)
+
+*** worker_death (kill worker)
+
 ** adapt jobs, queues and workers to use this protocol layer
    Leave only public methods on each component
 
