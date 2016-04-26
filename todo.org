@@ -9,6 +9,14 @@
 
 *** job_result
 
+*** enqueue_job
+
+**** lpush (at front)
+
+*** cleanup registries
+
+*** suspension
+
 *** dependents
 
 **** delete
