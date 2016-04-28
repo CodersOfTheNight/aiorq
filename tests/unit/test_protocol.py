@@ -5,11 +5,11 @@ from aiorq.job import utcparse, utcformat, utcnow
 from aiorq.keys import (queues_key, queue_key, failed_queue_key,
                         job_key, started_registry, finished_registry,
                         deferred_registry)
-from aiorq.protocol import (queues, jobs, started_jobs, finished_jobs,
-                            deferred_jobs, empty_queue, queue_length,
-                            enqueue_job, dequeue_job, cancel_job,
-                            start_job, finish_job, fail_job,
-                            requeue_job)
+from aiorq.protocol import (queues, jobs, job_status, started_jobs,
+                            finished_jobs, deferred_jobs, empty_queue,
+                            queue_length, enqueue_job, dequeue_job,
+                            cancel_job, start_job, finish_job,
+                            fail_job, requeue_job)
 from aiorq.specs import JobStatus
 
 
@@ -42,6 +42,17 @@ def test_jobs_args(redis):
     yield from redis.rpush(queue_key(queue), b'foo')
     yield from redis.rpush(queue_key(queue), b'bar')
     assert set((yield from jobs(redis, queue, 0, 0))) == {b'foo'}
+
+
+# Job status.
+
+
+def test_job_status(redis):
+    """Get job status."""
+
+    id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
+    yield from redis.hset(job_key(id), b'status', JobStatus.QUEUED)
+    assert (yield from job_status(redis, id)) == JobStatus.QUEUED
 
 
 # Started jobs.

@@ -45,6 +45,18 @@ def jobs(redis, queue, start=0, end=-1):
 
 
 @asyncio.coroutine
+def job_status(redis, id):
+    """Get job status.
+
+    :type redis: `aioredis.Redis`
+    :type id: bytes
+
+    """
+
+    return (yield from redis.hget(job_key(id), b'status'))
+
+
+@asyncio.coroutine
 def started_jobs(redis, queue, start=0, end=-1):
     """All started jobs from this queue.
 
