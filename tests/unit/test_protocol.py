@@ -226,7 +226,7 @@ def test_enqueue_job_set_job_status(redis):
         b'timeout': 180,
     }
     yield from enqueue_job(redis, queue, id, spec)
-    assert (yield from redis.hget(job_key(id), b'status')) == b'queued'
+    assert (yield from job_status(redis, id)) == JobStatus.QUEUED
 
 
 def test_enqueue_job_set_job_origin(redis):
@@ -339,7 +339,7 @@ def test_start_job_sets_job_status(redis):
     queue = b'default'
     id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
     yield from start_job(redis, queue, id)
-    assert (yield from redis.hget(job_key(id), b'status')) == JobStatus.STARTED
+    assert (yield from job_status(redis, id)) == JobStatus.STARTED
 
 
 def test_start_job_sets_started_time(redis):
@@ -415,8 +415,7 @@ def test_finish_job_sets_corresponding_status(redis):
     stored_spec = yield from dequeue_job(redis, queue)
     yield from start_job(redis, queue, id)
     yield from finish_job(redis, id, stored_spec)
-    status = yield from redis.hget(job_key(id), b'status')
-    assert status == JobStatus.FINISHED
+    assert (yield from job_status(redis, id)) == JobStatus.FINISHED
 
 
 def test_finish_job_sets_results_ttl(redis):
@@ -534,7 +533,7 @@ def test_fail_job_set_status(redis):
     }
     yield from enqueue_job(redis, queue, id, spec)
     yield from fail_job(redis, queue, id, b"Exception('We are here')")
-    assert (yield from redis.hget(job_key(id), b'status')) == JobStatus.FAILED
+    assert (yield from job_status(redis, id)) == JobStatus.FAILED
 
 
 def test_fail_job_sets_ended_at(redis):
@@ -593,7 +592,7 @@ def test_requeue_job_set_status(redis):
     yield from dequeue_job(redis, queue)
     yield from fail_job(redis, queue, id, b"Exception('We are here')")
     yield from requeue_job(redis, id)
-    assert (yield from redis.hget(job_key(id), b'status')) == JobStatus.QUEUED
+    assert (yield from job_status(redis, id)) == JobStatus.QUEUED
 
 
 def test_requeue_job_clean_exc_info(redis):
