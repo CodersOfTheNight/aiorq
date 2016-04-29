@@ -35,6 +35,7 @@
     - cancel_job(job_id, pool)
     - requeue_job(job_id, pool)
     - get_current_job() # Unique job instance for each asyncio task.
+    - get_current_worker() # To store state (HTTP session for example).
     - job_exists(job_id, pool)
     - fetch_job(job_id, pool) # Return instance from redis.
     - all_queues(pool)
