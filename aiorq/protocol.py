@@ -311,12 +311,13 @@ def workers(redis):
 
 
 @asyncio.coroutine
-def worker_birth(redis, id, queues):
+def worker_birth(redis, id, queues, ttl=None):
     """Register workers birth.
 
     :type redis: `aioredis.Redis`
     :type id: bytes
     :type queues: list
+    :type ttl: int or None
 
     """
 
@@ -324,5 +325,6 @@ def worker_birth(redis, id, queues):
     multi.delete(worker_key(id))
     multi.hset(worker_key(id), b'birth', utcformat(utcnow()))
     multi.hset(worker_key(id), b'queues', b','.join(queues))
+    multi.expire(worker_key(id), ttl or 420)
     multi.sadd(workers_key(), worker_key(id))
     yield from multi.execute()

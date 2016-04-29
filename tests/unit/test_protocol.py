@@ -709,3 +709,21 @@ def test_worker_birth_removes_old_hash(redis):
     yield from redis.hset(worker_key(worker), b'bar', b'baz')
     yield from worker_birth(redis, worker, queue_names)
     assert not (yield from redis.hget(worker_key(worker), b'bar'))
+
+
+def test_worker_birth_sets_worker_ttl(redis):
+    """Set worker ttl."""
+
+    worker = b'foo'
+    queue_names = [b'bar', b'baz']
+    yield from worker_birth(redis, worker, queue_names)
+    assert (yield from redis.ttl(worker_key(worker))) == 420
+
+
+def test_worker_birth_sets_custom_worker_ttl(redis):
+    """Set custom worker ttl."""
+
+    worker = b'foo'
+    queue_names = [b'bar', b'baz']
+    yield from worker_birth(redis, worker, queue_names, 1000)
+    assert (yield from redis.ttl(worker_key(worker))) == 1000
