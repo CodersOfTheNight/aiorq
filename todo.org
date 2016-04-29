@@ -61,7 +61,7 @@
       * queue.is_empty()
       * queue.count
       * queue.jobs
-      * queue.compact #?
+      * queue.compact()
       * queue.enqueue_call()
       * queue.enqueue()
 
