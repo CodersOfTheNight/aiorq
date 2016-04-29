@@ -57,3 +57,9 @@ def workers_key():
     """Redis key for workers set."""
 
     return b'rq:workers'
+
+
+def worker_key(name):
+    """Redis key for worker."""
+
+    return b'rq:worker:' + name

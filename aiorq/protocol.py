@@ -14,7 +14,7 @@ import itertools
 from .exceptions import InvalidOperationError
 from .keys import (queues_key, queue_key, failed_queue_key, job_key,
                    started_registry, finished_registry, deferred_registry,
-                   workers_key)
+                   workers_key, worker_key)
 from .job import utcformat, utcnow
 from .specs import JobStatus
 from .utils import current_timestamp
@@ -308,3 +308,17 @@ def workers(redis):
     """
 
     return (yield from redis.smembers(workers_key()))
+
+
+@asyncio.coroutine
+def worker_birth(redis, id):
+    """Register workers birth.
+
+    :type redis: `aioredis.Redis`
+    :type id: bytes
+
+    """
+
+    multi = redis.multi_exec()
+    multi.sadd(workers_key(), worker_key(id))
+    yield from multi.execute()

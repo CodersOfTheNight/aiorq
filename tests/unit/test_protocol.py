@@ -4,12 +4,13 @@ from aiorq.exceptions import InvalidOperationError
 from aiorq.job import utcparse, utcformat, utcnow
 from aiorq.keys import (queues_key, queue_key, failed_queue_key,
                         job_key, started_registry, finished_registry,
-                        deferred_registry, workers_key)
+                        deferred_registry, workers_key, worker_key)
 from aiorq.protocol import (queues, jobs, job_status, started_jobs,
                             finished_jobs, deferred_jobs, empty_queue,
                             queue_length, enqueue_job, dequeue_job,
                             cancel_job, start_job, finish_job,
-                            fail_job, requeue_job, workers)
+                            fail_job, requeue_job, workers,
+                            worker_birth)
 from aiorq.specs import JobStatus
 
 
@@ -667,3 +668,14 @@ def test_workers(redis):
     yield from redis.sadd(workers_key(), b'foo')
     yield from redis.sadd(workers_key(), b'bar')
     assert set((yield from workers(redis))) == {b'foo', b'bar'}
+
+
+# Worker birth.
+
+
+def test_worker_birth_workers_set(redis):
+    """Add worker to the workers set."""
+
+    worker = b'foo'
+    yield from worker_birth(redis, worker)
+    assert (yield from redis.smembers(workers_key())) == [worker_key(worker)]
