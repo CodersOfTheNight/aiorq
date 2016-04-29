@@ -677,7 +677,8 @@ def test_worker_birth_workers_set(redis):
     """Add worker to the workers set."""
 
     worker = b'foo'
-    yield from worker_birth(redis, worker)
+    queue_names = [b'bar', b'baz']
+    yield from worker_birth(redis, worker, queue_names)
     assert (yield from redis.smembers(workers_key())) == [worker_key(worker)]
 
 
@@ -685,6 +686,16 @@ def test_worker_birth_sets_birth_date(redis):
     """Set worker birth date."""
 
     worker = b'foo'
-    yield from worker_birth(redis, worker)
+    queue_names = [b'bar', b'baz']
+    yield from worker_birth(redis, worker, queue_names)
     birth = utcformat(utcnow())
     assert (yield from redis.hget(worker_key(worker), b'birth')) == birth
+
+
+def test_worker_birth_sets_queue_names(redis):
+    """Set worker queue names."""
+
+    worker = b'foo'
+    queue_names = [b'bar', b'baz']
+    yield from worker_birth(redis, worker, queue_names)
+    assert (yield from redis.hget(worker_key(worker), b'queues')) == b'bar,baz'

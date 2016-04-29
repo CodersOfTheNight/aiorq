@@ -311,15 +311,17 @@ def workers(redis):
 
 
 @asyncio.coroutine
-def worker_birth(redis, id):
+def worker_birth(redis, id, queues):
     """Register workers birth.
 
     :type redis: `aioredis.Redis`
     :type id: bytes
+    :type queues: list
 
     """
 
     multi = redis.multi_exec()
     multi.hset(worker_key(id), b'birth', utcformat(utcnow()))
+    multi.hset(worker_key(id), b'queues', b','.join(queues))
     multi.sadd(workers_key(), worker_key(id))
     yield from multi.execute()
