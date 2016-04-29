@@ -13,7 +13,8 @@ import itertools
 
 from .exceptions import InvalidOperationError
 from .keys import (queues_key, queue_key, failed_queue_key, job_key,
-                   started_registry, finished_registry, deferred_registry)
+                   started_registry, finished_registry, deferred_registry,
+                   workers_key)
 from .job import utcformat, utcnow
 from .specs import JobStatus
 from .utils import current_timestamp
@@ -296,3 +297,14 @@ def requeue_job(redis, id):
     multi.hdel(job_key(id), b'exc_info')
     multi.rpush(queue_key(job[b'origin']), id)
     yield from multi.execute()
+
+
+@asyncio.coroutine
+def workers(redis):
+    """Worker keys.
+
+    :type redis: `aioredis.Redis`
+
+    """
+
+    return (yield from redis.smembers(workers_key()))

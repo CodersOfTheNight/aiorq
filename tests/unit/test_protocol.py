@@ -4,12 +4,12 @@ from aiorq.exceptions import InvalidOperationError
 from aiorq.job import utcparse, utcformat, utcnow
 from aiorq.keys import (queues_key, queue_key, failed_queue_key,
                         job_key, started_registry, finished_registry,
-                        deferred_registry)
+                        deferred_registry, workers_key)
 from aiorq.protocol import (queues, jobs, job_status, started_jobs,
                             finished_jobs, deferred_jobs, empty_queue,
                             queue_length, enqueue_job, dequeue_job,
                             cancel_job, start_job, finish_job,
-                            fail_job, requeue_job)
+                            fail_job, requeue_job, workers)
 from aiorq.specs import JobStatus
 
 
@@ -656,3 +656,14 @@ def test_requeue_job_error_on_non_failed_job(redis):
     yield from enqueue_job(redis, queue, id, spec)
     with pytest.raises(InvalidOperationError):
         yield from requeue_job(redis, id)
+
+
+# Workers.
+
+
+def test_workers(redis):
+    """Get all worker keys."""
+
+    yield from redis.sadd(workers_key(), b'foo')
+    yield from redis.sadd(workers_key(), b'bar')
+    assert set((yield from workers(redis))) == {b'foo', b'bar'}

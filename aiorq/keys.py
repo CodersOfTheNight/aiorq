@@ -51,3 +51,9 @@ def deferred_registry(queue):
     """Redis key for deferred job registry."""
 
     return b'rq:deferred:' + queue
+
+
+def workers_key():
+    """Redis key for workers set."""
+
+    return b'rq:workers'
