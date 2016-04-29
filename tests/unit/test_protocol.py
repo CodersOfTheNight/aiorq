@@ -699,3 +699,13 @@ def test_worker_birth_sets_queue_names(redis):
     queue_names = [b'bar', b'baz']
     yield from worker_birth(redis, worker, queue_names)
     assert (yield from redis.hget(worker_key(worker), b'queues')) == b'bar,baz'
+
+
+def test_worker_birth_removes_old_hash(redis):
+    """Remove old hash stored from the previous run."""
+
+    worker = b'foo'
+    queue_names = [b'bar', b'baz']
+    yield from redis.hset(worker_key(worker), b'bar', b'baz')
+    yield from worker_birth(redis, worker, queue_names)
+    assert not (yield from redis.hget(worker_key(worker), b'bar'))

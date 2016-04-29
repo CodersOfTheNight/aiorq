@@ -321,6 +321,7 @@ def worker_birth(redis, id, queues):
     """
 
     multi = redis.multi_exec()
+    multi.delete(worker_key(id))
     multi.hset(worker_key(id), b'birth', utcformat(utcnow()))
     multi.hset(worker_key(id), b'queues', b','.join(queues))
     multi.sadd(workers_key(), worker_key(id))
