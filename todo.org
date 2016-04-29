@@ -3,10 +3,6 @@
 ** extract protocol layer
    We can't use connection pull *and* pipelines without explicit entry points.
 
-*** job_status
-
-*** set_job_status
-
 *** job_result
 
 *** enqueue_job
