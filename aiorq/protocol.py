@@ -320,5 +320,6 @@ def worker_birth(redis, id):
     """
 
     multi = redis.multi_exec()
+    multi.hset(worker_key(id), b'birth', utcformat(utcnow()))
     multi.sadd(workers_key(), worker_key(id))
     yield from multi.execute()

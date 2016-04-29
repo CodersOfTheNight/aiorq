@@ -679,3 +679,12 @@ def test_worker_birth_workers_set(redis):
     worker = b'foo'
     yield from worker_birth(redis, worker)
     assert (yield from redis.smembers(workers_key())) == [worker_key(worker)]
+
+
+def test_worker_birth_sets_birth_date(redis):
+    """Set worker birth date."""
+
+    worker = b'foo'
+    yield from worker_birth(redis, worker)
+    birth = utcformat(utcnow())
+    assert (yield from redis.hget(worker_key(worker), b'birth')) == birth
