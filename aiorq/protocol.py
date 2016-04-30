@@ -321,6 +321,10 @@ def worker_birth(redis, id, queues, ttl=None):
 
     """
 
+    if (yield from redis.exists(worker_key(id))):
+        if not (yield from redis.hexists(worker_key(id), b'death')):
+            msg = 'There exists an active worker named {!r} already'.format(id)
+            raise ValueError(msg)
     multi = redis.multi_exec()
     multi.delete(worker_key(id))
     multi.hset(worker_key(id), b'birth', utcformat(utcnow()))

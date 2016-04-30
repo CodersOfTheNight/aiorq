@@ -706,7 +706,7 @@ def test_worker_birth_removes_old_hash(redis):
 
     worker = b'foo'
     queue_names = [b'bar', b'baz']
-    yield from redis.hset(worker_key(worker), b'bar', b'baz')
+    yield from redis.hmset(worker_key(worker), b'bar', b'baz', b'death', 0)
     yield from worker_birth(redis, worker, queue_names)
     assert not (yield from redis.hget(worker_key(worker), b'bar'))
 
@@ -727,3 +727,13 @@ def test_worker_birth_sets_custom_worker_ttl(redis):
     queue_names = [b'bar', b'baz']
     yield from worker_birth(redis, worker, queue_names, 1000)
     assert (yield from redis.ttl(worker_key(worker))) == 1000
+
+
+def test_worker_birth_fail_worker_exists(redis):
+    """Register birth will fail with worker which already exists."""
+
+    worker = b'foo'
+    queue_names = [b'bar', b'baz']
+    yield from redis.hset(worker_key(worker), b'bar', b'baz')
+    with pytest.raises(ValueError):
+        yield from worker_birth(redis, worker, queue_names)
