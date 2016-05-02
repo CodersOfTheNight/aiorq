@@ -155,6 +155,7 @@ def enqueue_job(redis, queue, id, spec, *, at_front=False):
     :type queue: bytes
     :type id: bytes
     :type spec: dict
+    :type at_front: bool
 
     """
 
