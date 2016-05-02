@@ -312,7 +312,7 @@ def workers(redis):
 
 @asyncio.coroutine
 def worker_birth(redis, id, queues, ttl=None):
-    """Register workers birth.
+    """Register worker birth.
 
     :type redis: `aioredis.Redis`
     :type id: bytes
@@ -331,4 +331,20 @@ def worker_birth(redis, id, queues, ttl=None):
     multi.hset(worker_key(id), b'queues', b','.join(queues))
     multi.expire(worker_key(id), ttl or 420)
     multi.sadd(workers_key(), worker_key(id))
+    yield from multi.execute()
+
+
+@asyncio.coroutine
+def worker_death(redis, id):
+    """Register worker death.
+
+    :type redis: `aioredis.Redis`
+    :type id: bytes
+
+    """
+
+    multi = redis.multi_exec()
+    multi.srem(workers_key(), worker_key(id))
+    multi.hset(worker_key(id), b'death', utcformat(utcnow()))
+    multi.expire(worker_key(id), 60)
     yield from multi.execute()

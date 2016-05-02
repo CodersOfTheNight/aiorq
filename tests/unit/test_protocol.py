@@ -10,7 +10,7 @@ from aiorq.protocol import (queues, jobs, job_status, started_jobs,
                             queue_length, enqueue_job, dequeue_job,
                             cancel_job, start_job, finish_job,
                             fail_job, requeue_job, workers,
-                            worker_birth)
+                            worker_birth, worker_death)
 from aiorq.specs import JobStatus
 
 
@@ -737,3 +737,37 @@ def test_worker_birth_fail_worker_exists(redis):
     yield from redis.hset(worker_key(worker), b'bar', b'baz')
     with pytest.raises(ValueError):
         yield from worker_birth(redis, worker, queue_names)
+
+
+# Worker death.
+
+
+def test_worker_death_workers_set(redis):
+    """Remove worker from workers set."""
+
+    worker = b'foo'
+    queue_names = [b'bar', b'baz']
+    yield from worker_birth(redis, worker, queue_names)
+    yield from worker_death(redis, worker)
+    assert not (yield from redis.smembers(workers_key()))
+
+
+def test_worker_death_sets_death_date(redis):
+    """Set worker death date."""
+
+    worker = b'foo'
+    queue_names = [b'bar', b'baz']
+    yield from worker_birth(redis, worker, queue_names)
+    yield from worker_death(redis, worker)
+    death = utcformat(utcnow())
+    assert (yield from redis.hget(worker_key(worker), b'death')) == death
+
+
+def test_worker_death_sets_worker_ttl(redis):
+    """Set worker hash ttl."""
+
+    worker = b'foo'
+    queue_names = [b'bar', b'baz']
+    yield from worker_birth(redis, worker, queue_names)
+    yield from worker_death(redis, worker)
+    assert (yield from redis.ttl(worker_key(worker))) == 60
