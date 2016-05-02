@@ -157,11 +157,33 @@ def test_empty_removes_jobs(redis):
         b'timeout': 180,
     }
     yield from enqueue_job(redis, queue, id, spec)
-    yield from empty_queue(redis, b'default')
+    yield from empty_queue(redis, queue)
     assert not (yield from redis.exists(job_key(id)))
 
 
-# TODO: test `empty_queue` removes job dependents.
+def test_empty_queue_removes_dependents(redis):
+    """Remove dependent jobs for jobs from cleaned queue."""
+
+    queue = b'default'
+    parent_id = b'56e6ba45-1aa3-4724-8c9f-51b7b0031cee'
+    id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
+    parent_spec = {
+        b'created_at': b'2016-04-05T22:40:35Z',
+        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+        b'description': b'fixtures.some_calculation(3, 4, z=2)',
+        b'timeout': 180,
+    }
+    spec = {
+        b'created_at': b'2016-04-05T22:40:35Z',
+        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+        b'description': b'fixtures.some_calculation(3, 4, z=2)',
+        b'timeout': 180,
+        b'dependency_id': parent_id,
+    }
+    yield from enqueue_job(redis, queue, parent_id, parent_spec)
+    yield from enqueue_job(redis, queue, id, spec)
+    yield from empty_queue(redis, queue)
+    assert not (yield from redis.smembers(dependents(parent_id)))
 
 
 # Compact queue.
