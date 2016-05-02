@@ -268,6 +268,7 @@ def finish_job(redis, id, spec):
     fields = (b'status', JobStatus.FINISHED,
               b'ended_at', utcformat(utcnow()))
     multi = redis.multi_exec()
+    multi.zrem(started_registry(spec[b'origin']), id)
     multi.hmset(job_key(id), *fields)
     if result_ttl == -1:
         multi.persist(job_key(id))
