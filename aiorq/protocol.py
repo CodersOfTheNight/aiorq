@@ -348,3 +348,16 @@ def worker_death(redis, id):
     multi.hset(worker_key(id), b'death', utcformat(utcnow()))
     multi.expire(worker_key(id), 60)
     yield from multi.execute()
+
+
+@asyncio.coroutine
+def worker_shutdown_requested(redis, id):
+    """Set worker shutdown requested date.
+
+    :type redis: `aioredis.Redis`
+    :type id: bytes
+
+    """
+
+    yield from redis.hset(
+        worker_key(id), b'shutdown_requested_date', utcformat(utcnow()))

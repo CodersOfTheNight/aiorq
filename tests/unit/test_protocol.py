@@ -10,7 +10,8 @@ from aiorq.protocol import (queues, jobs, job_status, started_jobs,
                             queue_length, enqueue_job, dequeue_job,
                             cancel_job, start_job, finish_job,
                             fail_job, requeue_job, workers,
-                            worker_birth, worker_death)
+                            worker_birth, worker_death,
+                            worker_shutdown_requested)
 from aiorq.specs import JobStatus
 
 
@@ -771,3 +772,18 @@ def test_worker_death_sets_worker_ttl(redis):
     yield from worker_birth(redis, worker, queue_names)
     yield from worker_death(redis, worker)
     assert (yield from redis.ttl(worker_key(worker))) == 60
+
+
+# Worker shutdown requested.
+
+
+def test_worker_shutdown_requested(redis):
+    """Set worker shutdown requested date."""
+
+    worker = b'foo'
+    queue_names = [b'bar', b'baz']
+    yield from worker_birth(redis, worker, queue_names)
+    yield from worker_shutdown_requested(redis, worker)
+    shutdown = yield from redis.hget(
+        worker_key(worker), b'shutdown_requested_date')
+    assert shutdown == utcformat(utcnow())
