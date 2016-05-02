@@ -751,7 +751,6 @@ def test_finish_job_finished_registry_negative_ttl(redis):
     assert finish == [id, -1]
 
 
-# TODO: worker status, current_job and heartbeat
 # TODO: process dependents keys
 
 
@@ -1004,6 +1003,16 @@ def test_worker_birth_worker_status(redis):
     assert status == WorkerStatus.STARTED
 
 
+def test_worker_birth_current_job(redis):
+    """Signify that aiorq doesn't support current_job worker attribute."""
+
+    worker = b'foo'
+    queue_names = [b'bar', b'baz']
+    yield from worker_birth(redis, worker, queue_names)
+    current_job = yield from redis.hget(worker_key(worker), b'current_job')
+    assert current_job == b'not supported'
+
+
 # Worker death.
 
 
@@ -1036,6 +1045,17 @@ def test_worker_death_sets_worker_ttl(redis):
     yield from worker_birth(redis, worker, queue_names)
     yield from worker_death(redis, worker)
     assert (yield from redis.ttl(worker_key(worker))) == 60
+
+
+def test_worker_death_sets_status(redis):
+    """Set worker status to IDLE."""
+
+    worker = b'foo'
+    queue_names = [b'bar', b'baz']
+    yield from worker_birth(redis, worker, queue_names)
+    yield from worker_death(redis, worker)
+    status = yield from redis.hget(worker_key(worker), b'status')
+    assert status == WorkerStatus.IDLE
 
 
 # Worker shutdown requested.

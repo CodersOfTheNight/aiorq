@@ -240,7 +240,7 @@ def start_job(redis, queue, id, spec):
     fields = (b'status', JobStatus.STARTED,
               b'started_at', utcformat(utcnow()))
     score = current_timestamp() + spec[b'timeout'] + 60
-    # TODO: worker state, current job and heartbeat.
+    # TODO: worker heartbeat.
     multi = redis.multi_exec()
     multi.hmset(job_key(id), *fields)
     multi.zadd(started_registry(queue), score, id)
@@ -354,7 +354,8 @@ def worker_birth(redis, id, queues, ttl=None):
     multi.hmset(worker_key(id),
                 b'birth', utcformat(utcnow()),
                 b'queues', b','.join(queues),
-                b'status', WorkerStatus.STARTED)
+                b'status', WorkerStatus.STARTED,
+                b'current_job', b'not supported')
     multi.expire(worker_key(id), ttl or 420)
     multi.sadd(workers_key(), worker_key(id))
     yield from multi.execute()
@@ -371,7 +372,9 @@ def worker_death(redis, id):
 
     multi = redis.multi_exec()
     multi.srem(workers_key(), worker_key(id))
-    multi.hset(worker_key(id), b'death', utcformat(utcnow()))
+    multi.hmset(worker_key(id),
+                b'death', utcformat(utcnow()),
+                b'status', WorkerStatus.IDLE)
     multi.expire(worker_key(id), 60)
     yield from multi.execute()
 
