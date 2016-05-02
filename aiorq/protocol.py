@@ -203,15 +203,14 @@ def dequeue_job(redis, queue):
     while True:
         job_id = yield from redis.lpop(queue_key(queue))
         if not job_id:
-            return
+            return None, {}
         job = yield from redis.hgetall(job_key(job_id))
         if not job:
             continue
-        job[b'id'] = job_id
         job[b'timeout'] = int(job[b'timeout'])
         if b'result_ttl' in job:
             job[b'result_ttl'] = int(job[b'result_ttl'])
-        return job
+        return job_id, job
 
 
 @asyncio.coroutine
