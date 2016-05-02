@@ -158,6 +158,12 @@ def enqueue_job(redis, queue, id, spec, *, at_front=False):
 
     """
 
+    has_dependency = False
+    if b'dependency_id' in spec:
+        coroutine = job_status(redis, spec[b'dependency_id'])
+        dependency_status = yield from coroutine
+        if dependency_status != JobStatus.FINISHED:
+            has_dependency = True
     if b'result_ttl' in spec and spec[b'result_ttl'] is None:
         spec[b'result_ttl'] = -1
     default_fields = (b'status', JobStatus.QUEUED,
@@ -168,7 +174,7 @@ def enqueue_job(redis, queue, id, spec, *, at_front=False):
     multi = redis.multi_exec()
     multi.sadd(queues_key(), queue)
     multi.hmset(job_key(id), *fields)
-    if b'dependency_id' not in spec:
+    if not has_dependency:
         if at_front:
             multi.lpush(queue_key(queue), id)
         else:
