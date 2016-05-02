@@ -168,10 +168,11 @@ def enqueue_job(redis, queue, id, spec, *, at_front=False):
     multi = redis.multi_exec()
     multi.sadd(queues_key(), queue)
     multi.hmset(job_key(id), *fields)
-    if at_front:
-        multi.lpush(queue_key(queue), id)
-    else:
-        multi.rpush(queue_key(queue), id)
+    if b'dependency_id' not in spec:
+        if at_front:
+            multi.lpush(queue_key(queue), id)
+        else:
+            multi.rpush(queue_key(queue), id)
     yield from multi.execute()
 
 
