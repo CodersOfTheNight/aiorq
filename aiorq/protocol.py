@@ -258,11 +258,11 @@ def finish_job(redis, id, spec):
 
     if b'result_ttl' not in spec:
         result_ttl = 500
-    elif spec[b'result_ttl'] == b'0':
+    elif spec[b'result_ttl'] == 0:
         yield from redis.delete(job_key(id))
         return
     else:
-        result_ttl = int(spec[b'result_ttl'])
+        result_ttl = spec[b'result_ttl']
     fields = (b'status', JobStatus.FINISHED,
               b'ended_at', utcformat(utcnow()))
     multi = redis.multi_exec()

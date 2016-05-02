@@ -657,6 +657,7 @@ def test_finish_job_use_custom_ttl(redis):
     yield from enqueue_job(redis, queue, id, spec)
     stored_spec = yield from dequeue_job(redis, queue)
     stored_spec[b'timeout'] = int(stored_spec[b'timeout'])
+    stored_spec[b'result_ttl'] = int(stored_spec[b'result_ttl'])
     yield from start_job(redis, queue, id, stored_spec)
     yield from finish_job(redis, id, stored_spec)
     assert (yield from redis.ttl(job_key(id))) == 5000
@@ -677,6 +678,7 @@ def test_finish_job_remove_results_zero_ttl(redis):
     yield from enqueue_job(redis, queue, id, spec)
     stored_spec = yield from dequeue_job(redis, queue)
     stored_spec[b'timeout'] = int(stored_spec[b'timeout'])
+    stored_spec[b'result_ttl'] = int(stored_spec[b'result_ttl'])
     yield from start_job(redis, queue, id, stored_spec)
     yield from finish_job(redis, id, stored_spec)
     assert not (yield from redis.exists(job_key(id)))
@@ -697,6 +699,7 @@ def test_finish_job_non_expired_job(redis):
     yield from enqueue_job(redis, queue, id, spec)
     stored_spec = yield from dequeue_job(redis, queue)
     stored_spec[b'timeout'] = int(stored_spec[b'timeout'])
+    stored_spec[b'result_ttl'] = int(stored_spec[b'result_ttl'])
     yield from start_job(redis, queue, id, stored_spec)
     yield from finish_job(redis, id, stored_spec)
     assert (yield from redis.ttl(job_key(id))) == -1
