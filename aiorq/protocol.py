@@ -180,7 +180,6 @@ def enqueue_job(redis, queue, id, spec, *, at_front=False):
     multi.sadd(queues_key(), queue)
     multi.hmset(job_key(id), *fields)
     if has_dependency:
-        # TODO: ttl argument for registry
         score = current_timestamp()
         multi.zadd(deferred_registry(queue), score, id)
         multi.sadd(dependents(spec[b'dependency_id']), id)
@@ -226,19 +225,19 @@ def cancel_job(redis, queue, id):
 
 
 @asyncio.coroutine
-def start_job(redis, queue, id):
+def start_job(redis, queue, id, spec):
     """Start given job.
 
     :type redis: `aioredis.Redis`
     :type queue: bytes
     :type id: bytes
+    :type spec: dict
 
     """
 
     fields = (b'status', JobStatus.STARTED,
               b'started_at', utcformat(utcnow()))
-    # TODO: TTL argument for registry
-    score = current_timestamp()
+    score = current_timestamp() + spec[b'timeout'] + 60
     # TODO: worker state, current job and heartbeat.
     multi = redis.multi_exec()
     multi.hmset(job_key(id), *fields)

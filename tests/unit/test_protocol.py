@@ -14,6 +14,7 @@ from aiorq.protocol import (queues, jobs, job_status, started_jobs,
                             worker_birth, worker_death,
                             worker_shutdown_requested)
 from aiorq.specs import JobStatus, WorkerStatus
+from aiorq.utils import current_timestamp
 
 
 # Queues.
@@ -370,7 +371,8 @@ def test_enqueue_job_finished_dependency(redis):
     }
     yield from enqueue_job(redis, queue, parent_id, parent_spec)
     stored_spec = yield from dequeue_job(redis, queue)
-    yield from start_job(redis, queue, parent_id)
+    stored_spec[b'timeout'] = int(stored_spec[b'timeout'])
+    yield from start_job(redis, queue, parent_id, stored_spec)
     yield from finish_job(redis, parent_id, stored_spec)
     yield from enqueue_job(redis, queue, id, spec)
     assert (yield from redis.lrange(queue_key(queue), 0, -1)) == [id]
@@ -508,7 +510,16 @@ def test_start_job_sets_job_status(redis):
 
     queue = b'default'
     id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
-    yield from start_job(redis, queue, id)
+    spec = {
+        b'created_at': b'2016-04-05T22:40:35Z',
+        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+        b'description': b'fixtures.some_calculation(3, 4, z=2)',
+        b'timeout': 180,
+    }
+    yield from enqueue_job(redis, queue, id, spec)
+    stored_spec = yield from dequeue_job(redis, queue)
+    stored_spec[b'timeout'] = int(stored_spec[b'timeout'])
+    yield from start_job(redis, queue, id, stored_spec)
     assert (yield from job_status(redis, id)) == JobStatus.STARTED
 
 
@@ -517,7 +528,16 @@ def test_start_job_sets_started_time(redis):
 
     queue = b'default'
     id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
-    yield from start_job(redis, queue, id)
+    spec = {
+        b'created_at': b'2016-04-05T22:40:35Z',
+        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+        b'description': b'fixtures.some_calculation(3, 4, z=2)',
+        b'timeout': 180,
+    }
+    yield from enqueue_job(redis, queue, id, spec)
+    stored_spec = yield from dequeue_job(redis, queue)
+    stored_spec[b'timeout'] = int(stored_spec[b'timeout'])
+    yield from start_job(redis, queue, id, stored_spec)
     started_at = yield from redis.hget(job_key(id), b'started_at')
     assert started_at == utcformat(utcnow())
 
@@ -527,8 +547,19 @@ def test_start_job_add_job_to_registry(redis):
 
     queue = b'default'
     id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
-    yield from start_job(redis, queue, id)
-    assert (yield from started_jobs(redis, queue)) == [id]
+    spec = {
+        b'created_at': b'2016-04-05T22:40:35Z',
+        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+        b'description': b'fixtures.some_calculation(3, 4, z=2)',
+        b'timeout': 180,
+    }
+    yield from enqueue_job(redis, queue, id, spec)
+    stored_spec = yield from dequeue_job(redis, queue)
+    stored_spec[b'timeout'] = int(stored_spec[b'timeout'])
+    yield from start_job(redis, queue, id, stored_spec)
+    score = current_timestamp() + stored_spec[b'timeout'] + 60
+    started = yield from redis.zrange(started_registry(queue), withscores=True)
+    assert started == [id, score]
 
 
 def test_start_job_persist_job(redis):
@@ -544,7 +575,9 @@ def test_start_job_persist_job(redis):
     }
     yield from enqueue_job(redis, queue, id, spec)
     yield from redis.expire(job_key(id), 3)
-    yield from start_job(redis, queue, id)
+    stored_spec = yield from dequeue_job(redis, queue)
+    stored_spec[b'timeout'] = int(stored_spec[b'timeout'])
+    yield from start_job(redis, queue, id, stored_spec)
     assert (yield from redis.ttl(job_key(id))) == -1
 
 
@@ -564,7 +597,8 @@ def test_finish_job_sets_ended_at(redis):
     }
     yield from enqueue_job(redis, queue, id, spec)
     stored_spec = yield from dequeue_job(redis, queue)
-    yield from start_job(redis, queue, id)
+    stored_spec[b'timeout'] = int(stored_spec[b'timeout'])
+    yield from start_job(redis, queue, id, stored_spec)
     yield from finish_job(redis, id, stored_spec)
     ended_at = yield from redis.hget(job_key(id), b'ended_at')
     assert ended_at == utcformat(utcnow())
@@ -583,7 +617,8 @@ def test_finish_job_sets_corresponding_status(redis):
     }
     yield from enqueue_job(redis, queue, id, spec)
     stored_spec = yield from dequeue_job(redis, queue)
-    yield from start_job(redis, queue, id)
+    stored_spec[b'timeout'] = int(stored_spec[b'timeout'])
+    yield from start_job(redis, queue, id, stored_spec)
     yield from finish_job(redis, id, stored_spec)
     assert (yield from job_status(redis, id)) == JobStatus.FINISHED
 
@@ -601,7 +636,8 @@ def test_finish_job_sets_results_ttl(redis):
     }
     yield from enqueue_job(redis, queue, id, spec)
     stored_spec = yield from dequeue_job(redis, queue)
-    yield from start_job(redis, queue, id)
+    stored_spec[b'timeout'] = int(stored_spec[b'timeout'])
+    yield from start_job(redis, queue, id, stored_spec)
     yield from finish_job(redis, id, stored_spec)
     assert (yield from redis.ttl(job_key(id))) == 500
 
@@ -620,7 +656,8 @@ def test_finish_job_use_custom_ttl(redis):
     }
     yield from enqueue_job(redis, queue, id, spec)
     stored_spec = yield from dequeue_job(redis, queue)
-    yield from start_job(redis, queue, id)
+    stored_spec[b'timeout'] = int(stored_spec[b'timeout'])
+    yield from start_job(redis, queue, id, stored_spec)
     yield from finish_job(redis, id, stored_spec)
     assert (yield from redis.ttl(job_key(id))) == 5000
 
@@ -639,7 +676,8 @@ def test_finish_job_remove_results_zero_ttl(redis):
     }
     yield from enqueue_job(redis, queue, id, spec)
     stored_spec = yield from dequeue_job(redis, queue)
-    yield from start_job(redis, queue, id)
+    stored_spec[b'timeout'] = int(stored_spec[b'timeout'])
+    yield from start_job(redis, queue, id, stored_spec)
     yield from finish_job(redis, id, stored_spec)
     assert not (yield from redis.exists(job_key(id)))
 
@@ -658,7 +696,8 @@ def test_finish_job_non_expired_job(redis):
     }
     yield from enqueue_job(redis, queue, id, spec)
     stored_spec = yield from dequeue_job(redis, queue)
-    yield from start_job(redis, queue, id)
+    stored_spec[b'timeout'] = int(stored_spec[b'timeout'])
+    yield from start_job(redis, queue, id, stored_spec)
     yield from finish_job(redis, id, stored_spec)
     assert (yield from redis.ttl(job_key(id))) == -1
 
@@ -738,8 +777,9 @@ def test_fail_job_removes_from_started_registry(redis):
         b'timeout': 180,
     }
     yield from enqueue_job(redis, queue, id, spec)
-    yield from dequeue_job(redis, queue)
-    yield from start_job(redis, queue, id)
+    stored_spec = yield from dequeue_job(redis, queue)
+    stored_spec[b'timeout'] = int(stored_spec[b'timeout'])
+    yield from start_job(redis, queue, id, stored_spec)
     yield from fail_job(redis, queue, id, b"Exception('We are here')")
     assert id not in (yield from started_jobs(redis, queue))
 
