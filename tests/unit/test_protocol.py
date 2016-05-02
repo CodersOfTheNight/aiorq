@@ -12,7 +12,7 @@ from aiorq.protocol import (queues, jobs, job_status, started_jobs,
                             fail_job, requeue_job, workers,
                             worker_birth, worker_death,
                             worker_shutdown_requested)
-from aiorq.specs import JobStatus
+from aiorq.specs import JobStatus, WorkerStatus
 
 
 # Queues.
@@ -738,6 +738,16 @@ def test_worker_birth_fail_worker_exists(redis):
     yield from redis.hset(worker_key(worker), b'bar', b'baz')
     with pytest.raises(ValueError):
         yield from worker_birth(redis, worker, queue_names)
+
+
+def test_worker_birth_worker_status(redis):
+    """Register birth sets worker status to STARTED."""
+
+    worker = b'foo'
+    queue_names = [b'bar', b'baz']
+    yield from worker_birth(redis, worker, queue_names)
+    status = yield from redis.hget(worker_key(worker), b'status')
+    assert status == WorkerStatus.STARTED
 
 
 # Worker death.

@@ -16,3 +16,11 @@ class JobStatus:
     FAILED = b'failed'
     STARTED = b'started'
     DEFERRED = b'deferred'
+
+
+class WorkerStatus:
+
+    STARTED = b'started'
+    SUSPENDED = b'suspended'
+    BUSY = b'busy'
+    IDLE = b'idle'

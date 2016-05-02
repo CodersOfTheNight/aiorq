@@ -16,7 +16,7 @@ from .keys import (queues_key, queue_key, failed_queue_key, job_key,
                    started_registry, finished_registry, deferred_registry,
                    workers_key, worker_key)
 from .job import utcformat, utcnow
-from .specs import JobStatus
+from .specs import JobStatus, WorkerStatus
 from .utils import current_timestamp
 
 
@@ -327,8 +327,10 @@ def worker_birth(redis, id, queues, ttl=None):
             raise ValueError(msg)
     multi = redis.multi_exec()
     multi.delete(worker_key(id))
-    multi.hset(worker_key(id), b'birth', utcformat(utcnow()))
-    multi.hset(worker_key(id), b'queues', b','.join(queues))
+    multi.hmset(worker_key(id),
+                b'birth', utcformat(utcnow()),
+                b'queues', b','.join(queues),
+                b'status', WorkerStatus.STARTED)
     multi.expire(worker_key(id), ttl or 420)
     multi.sadd(workers_key(), worker_key(id))
     yield from multi.execute()
