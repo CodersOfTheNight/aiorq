@@ -216,6 +216,23 @@ def test_enqueue_job_add_job_key_to_the_queue(redis):
     assert (yield from redis.lrange(queue_key(queue), 0, -1)) == queue_content
 
 
+def test_enqueue_job_at_front(redis):
+    """Enqueue job at front must add its id to the front of the queue."""
+
+    queue = b'default'
+    id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
+    spec = {
+        b'created_at': b'2016-04-05T22:40:35Z',
+        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+        b'description': b'fixtures.some_calculation(3, 4, z=2)',
+        b'timeout': 180,
+    }
+    yield from redis.lpush(queue_key(queue), b'xxx')
+    yield from enqueue_job(redis, queue, id, spec, at_front=True)
+    queue_content = [b'2a5079e7-387b-492f-a81c-68aa55c194c8', b'xxx']
+    assert (yield from redis.lrange(queue_key(queue), 0, -1)) == queue_content
+
+
 def test_enqueue_job_set_job_status(redis):
     """Enqueue job must set job status to QUEUED."""
 

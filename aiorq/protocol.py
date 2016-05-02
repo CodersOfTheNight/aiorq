@@ -148,7 +148,7 @@ def compact_queue(redis):
 
 
 @asyncio.coroutine
-def enqueue_job(redis, queue, id, spec):
+def enqueue_job(redis, queue, id, spec, *, at_front=False):
     """Persists the job specification to it corresponding Redis id.
 
     :type redis: `aioredis.Redis`
@@ -168,7 +168,10 @@ def enqueue_job(redis, queue, id, spec):
     multi = redis.multi_exec()
     multi.sadd(queues_key(), queue)
     multi.hmset(job_key(id), *fields)
-    multi.rpush(queue_key(queue), id)
+    if at_front:
+        multi.lpush(queue_key(queue), id)
+    else:
+        multi.rpush(queue_key(queue), id)
     yield from multi.execute()
 
 
