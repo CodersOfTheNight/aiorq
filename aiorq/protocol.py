@@ -208,6 +208,9 @@ def dequeue_job(redis, queue):
         if not job:
             continue
         job[b'id'] = job_id
+        job[b'timeout'] = int(job[b'timeout'])
+        if b'result_ttl' in job:
+            job[b'result_ttl'] = int(job[b'result_ttl'])
         return job
 
 
