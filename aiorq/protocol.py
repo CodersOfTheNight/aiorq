@@ -164,9 +164,13 @@ def enqueue_job(redis, queue, id, spec, *, at_front=False):
         dependency_status = yield from coroutine
         if dependency_status != JobStatus.FINISHED:
             has_dependency = True
+    if has_dependency:
+        status = JobStatus.DEFERRED
+    else:
+        status = JobStatus.QUEUED
     if b'result_ttl' in spec and spec[b'result_ttl'] is None:
         spec[b'result_ttl'] = -1
-    default_fields = (b'status', JobStatus.QUEUED,
+    default_fields = (b'status', status,
                       b'origin', queue,
                       b'enqueued_at', utcformat(utcnow()))
     spec_fields = itertools.chain.from_iterable(spec.items())
