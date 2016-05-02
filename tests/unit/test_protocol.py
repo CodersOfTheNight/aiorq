@@ -4,7 +4,8 @@ from aiorq.exceptions import InvalidOperationError
 from aiorq.job import utcparse, utcformat, utcnow
 from aiorq.keys import (queues_key, queue_key, failed_queue_key,
                         job_key, started_registry, finished_registry,
-                        deferred_registry, workers_key, worker_key)
+                        deferred_registry, workers_key, worker_key,
+                        dependents)
 from aiorq.protocol import (queues, jobs, job_status, started_jobs,
                             finished_jobs, deferred_jobs, empty_queue,
                             queue_length, enqueue_job, dequeue_job,
@@ -351,6 +352,59 @@ def test_enqueue_job_finished_dependency(redis):
     yield from finish_job(redis, parent_id, stored_spec)
     yield from enqueue_job(redis, queue, id, spec)
     assert (yield from redis.lrange(queue_key(queue), 0, -1)) == [id]
+
+
+def test_enqueue_job_deferred_job_registry(redis):
+    """Add job with unfinished dependency to deferred job registry."""
+
+    queue = b'default'
+    parent_id = b'56e6ba45-1aa3-4724-8c9f-51b7b0031cee'
+    id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
+    parent_spec = {
+        b'created_at': b'2016-04-05T22:40:35Z',
+        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+        b'description': b'fixtures.some_calculation(3, 4, z=2)',
+        b'timeout': 180,
+    }
+    spec = {
+        b'created_at': b'2016-04-05T22:40:35Z',
+        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+        b'description': b'fixtures.some_calculation(3, 4, z=2)',
+        b'timeout': 180,
+        b'dependency_id': parent_id,
+    }
+    yield from enqueue_job(redis, queue, parent_id, parent_spec)
+    yield from enqueue_job(redis, queue, id, spec)
+    assert (yield from deferred_jobs(redis, queue)) == [id]
+
+
+def test_enqueue_job_dependents_set(redis):
+    """Add job to the dependents set if its dependency isn't finished yet."""
+
+    queue = b'default'
+    parent_id = b'56e6ba45-1aa3-4724-8c9f-51b7b0031cee'
+    id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
+    parent_spec = {
+        b'created_at': b'2016-04-05T22:40:35Z',
+        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+        b'description': b'fixtures.some_calculation(3, 4, z=2)',
+        b'timeout': 180,
+    }
+    spec = {
+        b'created_at': b'2016-04-05T22:40:35Z',
+        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+        b'description': b'fixtures.some_calculation(3, 4, z=2)',
+        b'timeout': 180,
+        b'dependency_id': parent_id,
+    }
+    yield from enqueue_job(redis, queue, parent_id, parent_spec)
+    yield from enqueue_job(redis, queue, id, spec)
+    assert (yield from redis.smembers(dependents(parent_id))) == [id]
+
+
+# TODO: enqueue_job checks dependency status, it isn't finished, then
+# another worker set it status to finished, then we defer job with
+# already finished dependency.  It will never be executed.
 
 
 # Dequeue job.

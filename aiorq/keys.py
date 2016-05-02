@@ -35,6 +35,12 @@ def job_key(id):
     return b'rq:job:' + id
 
 
+def dependents(id):
+    """Redis key for job dependents."""
+
+    return b'rq:job:' + id + b':dependents'
+
+
 def started_registry(queue):
     """Redis key for started job registry."""
 

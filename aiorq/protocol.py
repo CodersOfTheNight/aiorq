@@ -14,7 +14,7 @@ import itertools
 from .exceptions import InvalidOperationError
 from .keys import (queues_key, queue_key, failed_queue_key, job_key,
                    started_registry, finished_registry, deferred_registry,
-                   workers_key, worker_key)
+                   workers_key, worker_key, dependents)
 from .job import utcformat, utcnow
 from .specs import JobStatus, WorkerStatus
 from .utils import current_timestamp
@@ -178,7 +178,12 @@ def enqueue_job(redis, queue, id, spec, *, at_front=False):
     multi = redis.multi_exec()
     multi.sadd(queues_key(), queue)
     multi.hmset(job_key(id), *fields)
-    if not has_dependency:
+    if has_dependency:
+        # TODO: ttl argument for registry
+        score = current_timestamp()
+        multi.zadd(deferred_registry(queue), score, id)
+        multi.sadd(dependents(spec[b'dependency_id']), id)
+    else:
         if at_front:
             multi.lpush(queue_key(queue), id)
         else:
