@@ -704,7 +704,6 @@ def test_finish_job_started_registry(redis):
         b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
         b'description': b'fixtures.some_calculation(3, 4, z=2)',
         b'timeout': 180,
-        b'result_ttl': None,
     }
     yield from enqueue_job(redis, queue, id, spec)
     stored_id, stored_spec = yield from dequeue_job(redis, queue)
@@ -713,8 +712,46 @@ def test_finish_job_started_registry(redis):
     assert not (yield from started_jobs(redis, queue))
 
 
+def test_finish_job_finished_registry(redis):
+    """Finish job add job to the finished job registry."""
+
+    queue = b'default'
+    id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
+    spec = {
+        b'created_at': b'2016-04-05T22:40:35Z',
+        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+        b'description': b'fixtures.some_calculation(3, 4, z=2)',
+        b'timeout': 180,
+    }
+    yield from enqueue_job(redis, queue, id, spec)
+    stored_id, stored_spec = yield from dequeue_job(redis, queue)
+    yield from start_job(redis, queue, id, stored_spec)
+    yield from finish_job(redis, id, stored_spec)
+    finish = yield from redis.zrange(finished_registry(queue), withscores=True)
+    assert finish == [id, current_timestamp() + 500]
+
+
+def test_finish_job_finished_registry_negative_ttl(redis):
+    """Don't use current timestamp in job score with empty result TTL."""
+
+    queue = b'default'
+    id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
+    spec = {
+        b'created_at': b'2016-04-05T22:40:35Z',
+        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+        b'description': b'fixtures.some_calculation(3, 4, z=2)',
+        b'timeout': 180,
+        b'result_ttl': None,
+    }
+    yield from enqueue_job(redis, queue, id, spec)
+    stored_id, stored_spec = yield from dequeue_job(redis, queue)
+    yield from start_job(redis, queue, id, stored_spec)
+    yield from finish_job(redis, id, stored_spec)
+    finish = yield from redis.zrange(finished_registry(queue), withscores=True)
+    assert finish == [id, -1]
+
+
 # TODO: worker status, current_job and heartbeat
-# TODO: add to finished registry
 # TODO: process dependents keys
 
 
