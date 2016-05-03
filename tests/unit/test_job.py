@@ -1,11 +1,12 @@
 import time
 from datetime import datetime
+from pickle import UnpicklingError
 
 import pytest
 
 from aiorq import (cancel_job, get_current_job, requeue_job, Queue,
                    get_failed_queue, Worker)
-from aiorq.exceptions import NoSuchJobError, UnpickleError
+from aiorq.exceptions import NoSuchJobError
 from aiorq.job import Job, loads, dumps
 from aiorq.specs import JobStatus
 from aiorq.utils import utcformat, utcnow
@@ -303,6 +304,43 @@ def test_loads_instance_method():
     assert job.enqueued_at == datetime(2016, 5, 3, 12, 10, 11)
 
 
+def test_loads_unreadable_data(redis):
+    """Loads unreadable pickle string will raise UnpickleError."""
+
+    id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
+    spec = {
+        b'created_at': b'2016-04-05T22:40:35Z',
+        b'data': b'this is no pickle string',
+        b'description': b'fixtures.some_calculation(3, 4, z=2)',
+        b'timeout': 180,
+        b'result_ttl': 5000,
+        b'status': JobStatus.QUEUED,
+        b'origin': b'default',
+        b'enqueued_at': b'2016-05-03T12:10:11Z',
+    }
+    with pytest.raises(UnpicklingError):
+        loads(id, spec)
+
+
+def test_loads_unimportable_data(redis):
+    """Loads unimportable data will raise attribute error."""
+
+    id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
+    spec = {
+        b'created_at': b'2016-04-05T22:40:35Z',
+        # nay_hello instead of say_hello
+        b'data': b"\x80\x04\x95'\x00\x00\x00\x00\x00\x00\x00(\x8c\x12fixtures.nay_hello\x94N\x8c\x06Lionel\x94\x85\x94}\x94t\x94.",  # noqa
+        b'description': b"fixtures.say_hello('Lionel')",
+        b'timeout': 180,
+        b'result_ttl': 5000,
+        b'status': JobStatus.QUEUED,
+        b'origin': b'default',
+        b'enqueued_at': b'2016-05-03T12:10:11Z',
+    }
+    with pytest.raises(AttributeError):
+        loads(id, spec)
+
+
 # Job.
 
 
@@ -312,40 +350,6 @@ def test_unicode():
     job = Job('myfunc', args=[12, "☃"], kwargs=dict(snowman="☃", null=None))
     expected_string = "myfunc(12, '☃', null=None, snowman='☃')"
     assert job.description, expected_string
-
-
-def test_fetching_unreadable_data(redis):
-    """Fetching succeeds on unreadable data, but lazy props fail."""
-
-    # Set up
-    job = Job(func=some_calculation, args=(3, 4), kwargs=dict(z=2))
-    yield from job.save()
-
-    # Just replace the data hkey with some random noise
-    yield from redis.hset(job.key, 'data', 'this is no pickle string')
-    yield from job.refresh()
-
-    for attr in ('func_name', 'instance', 'args', 'kwargs'):
-        with pytest.raises(UnpickleError):
-            getattr(job, attr)
-
-
-def test_job_is_unimportable(redis):
-    """Jobs that cannot be imported throw exception on access."""
-
-    job = Job(func=say_hello, args=('Lionel',))
-    yield from job.save()
-
-    # Now slightly modify the job to make it unimportable (this is
-    # equivalent to a worker not having the most up-to-date source
-    # code and unable to import the function)
-    data = yield from redis.hget(job.key, 'data')
-    unimportable_data = data.replace(b'say_hello', b'nay_hello')
-    yield from redis.hset(job.key, 'data', unimportable_data)
-
-    yield from job.refresh()
-    with pytest.raises(AttributeError):
-        job.func  # accessing the func property should fail
 
 
 def test_custom_meta_is_persisted(redis):
