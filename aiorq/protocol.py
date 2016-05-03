@@ -15,9 +15,8 @@ from .exceptions import InvalidOperationError
 from .keys import (queues_key, queue_key, failed_queue_key, job_key,
                    started_registry, finished_registry, deferred_registry,
                    workers_key, worker_key, dependents)
-from .job import utcformat, utcnow
 from .specs import JobStatus, WorkerStatus
-from .utils import current_timestamp
+from .utils import current_timestamp, utcformat, utcnow
 
 
 @asyncio.coroutine

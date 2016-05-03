@@ -1,7 +1,6 @@
 import pytest
 
 from aiorq.exceptions import InvalidOperationError
-from aiorq.job import utcparse, utcformat, utcnow
 from aiorq.keys import (queues_key, queue_key, failed_queue_key,
                         job_key, started_registry, finished_registry,
                         deferred_registry, workers_key, worker_key,
@@ -14,7 +13,7 @@ from aiorq.protocol import (queues, jobs, job_status, started_jobs,
                             worker_birth, worker_death,
                             worker_shutdown_requested)
 from aiorq.specs import JobStatus, WorkerStatus
-from aiorq.utils import current_timestamp
+from aiorq.utils import current_timestamp, utcparse, utcformat, utcnow
 
 
 # Queues.
