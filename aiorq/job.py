@@ -68,8 +68,14 @@ def dumps(job):
         func_name = job.func
     elif isinstance(job.func, bytes):
         func_name = job.func.decode()
-    else:
+    elif inspect.isfunction(job.func) or inspect.isbuiltin(job.func):
         func_name = '{}.{}'.format(job.func.__module__, job.func.__name__)
+    elif hasattr(job.func, '__call__'):
+        func_name = '__call__'
+        instance = job.func
+    else:
+        msg = 'Expected a callable or a string, but got: {}'.format(job.func)
+        raise TypeError(msg)
     data = func_name, instance, job.args, job.kwargs
     spec = {}
     spec[b'created_at'] = utcformat(job.created_at)

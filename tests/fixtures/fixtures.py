@@ -72,6 +72,9 @@ def div_by_zero(x):
     return x / 0
 
 
+l = lambda: 1
+
+
 mock = Mock()
 
 

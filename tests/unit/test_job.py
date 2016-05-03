@@ -11,7 +11,7 @@ from aiorq.specs import JobStatus
 from aiorq.utils import utcformat, utcnow
 from fixtures import (Number, some_calculation, say_hello,
                       CallableObject, access_self, long_running_job,
-                      echo, UnicodeStringObject, div_by_zero)
+                      echo, UnicodeStringObject, div_by_zero, l)
 from helpers import strip_microseconds
 
 
@@ -133,6 +133,113 @@ def test_dumps_bytes_function():
         b'origin': b'default',
         b'enqueued_at': b'2016-05-03T12:10:11Z',
     }
+
+
+def test_dumps_builtin():
+    """Dump job spec from the builtin job."""
+
+    job = Job(
+        id='2a5079e7-387b-492f-a81c-68aa55c194c8',
+        created_at=datetime(2016, 4, 5, 22, 40, 35),
+        func=len,
+        args=([],),
+        kwargs={},
+        description='builtins.len([])',
+        timeout=180,
+        result_ttl=5000,
+        status='queued',
+        origin='default',
+        enqueued_at=datetime(2016, 5, 3, 12, 10, 11))
+    id, spec = dumps(job)
+    assert id == b'2a5079e7-387b-492f-a81c-68aa55c194c8'
+    assert spec == {
+        b'created_at': b'2016-04-05T22:40:35Z',
+        b'data': b'\x80\x04\x95\x1a\x00\x00\x00\x00\x00\x00\x00(\x8c\x0cbuiltins.len\x94N]\x94\x85\x94}\x94t\x94.',  # noqa
+        b'description': b'builtins.len([])',
+        b'timeout': 180,
+        b'result_ttl': 5000,
+        b'status': JobStatus.QUEUED,
+        b'origin': b'default',
+        b'enqueued_at': b'2016-05-03T12:10:11Z',
+    }
+
+
+def test_dumps_callable_object():
+    """Dump job spec from the callable object job."""
+
+    kallable = CallableObject()
+    job = Job(
+        id='2a5079e7-387b-492f-a81c-68aa55c194c8',
+        created_at=datetime(2016, 4, 5, 22, 40, 35),
+        func=kallable,
+        args=(),
+        kwargs={},
+        description='__call__()',
+        timeout=180,
+        result_ttl=5000,
+        status='queued',
+        origin='default',
+        enqueued_at=datetime(2016, 5, 3, 12, 10, 11))
+    id, spec = dumps(job)
+    assert id == b'2a5079e7-387b-492f-a81c-68aa55c194c8'
+    assert spec == {
+        b'created_at': b'2016-04-05T22:40:35Z',
+        b'data': b'\x80\x04\x955\x00\x00\x00\x00\x00\x00\x00(\x8c\x08__call__\x94\x8c\x08fixtures\x94\x8c\x0eCallableObject\x94\x93\x94)}\x94\x92\x94)}\x94t\x94.',  # noqa
+        b'description': b'__call__()',
+        b'timeout': 180,
+        b'result_ttl': 5000,
+        b'status': JobStatus.QUEUED,
+        b'origin': b'default',
+        b'enqueued_at': b'2016-05-03T12:10:11Z',
+    }
+
+
+def test_dumps_lambda_function():
+    """Dump job spec from the lambda function job."""
+
+    job = Job(
+        id='2a5079e7-387b-492f-a81c-68aa55c194c8',
+        created_at=datetime(2016, 4, 5, 22, 40, 35),
+        func=l,
+        args=(),
+        kwargs={},
+        description='fixtures.<lambda>()',
+        timeout=180,
+        result_ttl=5000,
+        status='queued',
+        origin='default',
+        enqueued_at=datetime(2016, 5, 3, 12, 10, 11))
+    id, spec = dumps(job)
+    assert id == b'2a5079e7-387b-492f-a81c-68aa55c194c8'
+    assert spec == {
+        b'created_at': b'2016-04-05T22:40:35Z',
+        b'data': b'\x80\x04\x95\x1c\x00\x00\x00\x00\x00\x00\x00(\x8c\x11fixtures.<lambda>\x94N)}\x94t\x94.',  # noqa
+        b'description': b'fixtures.<lambda>()',
+        b'timeout': 180,
+        b'result_ttl': 5000,
+        b'status': JobStatus.QUEUED,
+        b'origin': b'default',
+        b'enqueued_at': b'2016-05-03T12:10:11Z',
+    }
+
+
+def test_dumps_broken_func():
+    """Raise type error if func argument is unusable."""
+
+    job = Job(
+        id='2a5079e7-387b-492f-a81c-68aa55c194c8',
+        created_at=datetime(2016, 4, 5, 22, 40, 35),
+        func=1,
+        args=(),
+        kwargs={},
+        description='builtins.int()',
+        timeout=180,
+        result_ttl=5000,
+        status='queued',
+        origin='default',
+        enqueued_at=datetime(2016, 5, 3, 12, 10, 11))
+    with pytest.raises(TypeError):
+        dumps(job)
 
 
 # Loads.
