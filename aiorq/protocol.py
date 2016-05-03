@@ -159,23 +159,22 @@ def enqueue_job(redis, queue, id, spec, *, at_front=False):
 
     """
 
+    if b'result_ttl' in spec and spec[b'result_ttl'] is None:
+        spec[b'result_ttl'] = -1
     has_dependency = False
     if b'dependency_id' in spec:
         coroutine = job_status(redis, spec[b'dependency_id'])
         dependency_status = yield from coroutine
         if dependency_status != JobStatus.FINISHED:
             has_dependency = True
-    if has_dependency:
-        status = JobStatus.DEFERRED
-    else:
-        status = JobStatus.QUEUED
-    if b'result_ttl' in spec and spec[b'result_ttl'] is None:
-        spec[b'result_ttl'] = -1
-    default_fields = (b'status', status,
-                      b'origin', queue,
-                      b'enqueued_at', utcformat(utcnow()))
     spec_fields = itertools.chain.from_iterable(spec.items())
-    fields = itertools.chain(spec_fields, default_fields)
+    default_fields = (b'origin', queue)
+    if has_dependency:
+        job_fields = (b'status', JobStatus.DEFERRED)
+    else:
+        job_fields = (b'status', JobStatus.QUEUED,
+                      b'enqueued_at', utcformat(utcnow()))
+    fields = itertools.chain(spec_fields, default_fields, job_fields)
     multi = redis.multi_exec()
     multi.sadd(queues_key(), queue)
     multi.hmset(job_key(id), *fields)
@@ -223,6 +222,7 @@ def cancel_job(redis, queue, id):
 
     """
 
+    # TODO: what we need to do with job hash and dependents set?
     yield from redis.lrem(queue_key(queue), 1, id)
 
 
@@ -277,6 +277,18 @@ def finish_job(redis, id, spec):
     else:
         multi.expire(job_key(id), result_ttl)
     yield from multi.execute()
+    while True:
+        job_id = yield from redis.spop(dependents(id))
+        if not job_id:
+            break
+        origin = yield from redis.hget(job_key(job_id), b'origin')
+        multi = redis.multi_exec()
+        multi.zrem(deferred_registry(origin), job_id)
+        multi.rpush(queue_key(origin), job_id)
+        multi.hmset(job_key(job_id),
+                    b'status', JobStatus.QUEUED,
+                    b'enqueued_at', utcformat(utcnow()))
+        yield from multi.execute()
 
 
 @asyncio.coroutine
@@ -310,7 +322,7 @@ def requeue_job(redis, id):
 
     """
 
-    job = yield from redis.hgetall(job_key(id))
+    job = yield from redis.hgetall(job_key(id))  # origin only?
     is_failed_job = yield from redis.lrem(failed_queue_key(), 1, id)
     if not job:
         return

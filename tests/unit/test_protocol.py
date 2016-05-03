@@ -425,6 +425,30 @@ def test_enqueue_job_dependents_set(redis):
     assert (yield from redis.smembers(dependents(parent_id))) == [id]
 
 
+def test_enqueue_job_defer_without_date(redis):
+    """Enqueue job with dependency doesn't set enqueued_at date."""
+
+    queue = b'default'
+    parent_id = b'56e6ba45-1aa3-4724-8c9f-51b7b0031cee'
+    id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
+    parent_spec = {
+        b'created_at': b'2016-04-05T22:40:35Z',
+        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+        b'description': b'fixtures.some_calculation(3, 4, z=2)',
+        b'timeout': 180,
+    }
+    spec = {
+        b'created_at': b'2016-04-05T22:40:35Z',
+        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+        b'description': b'fixtures.some_calculation(3, 4, z=2)',
+        b'timeout': 180,
+        b'dependency_id': parent_id,
+    }
+    yield from enqueue_job(redis, queue, parent_id, parent_spec)
+    yield from enqueue_job(redis, queue, id, spec)
+    assert not (yield from redis.hexists(job_key(id), b'enqueued_at'))
+
+
 # TODO: enqueue_job checks dependency status, it isn't finished, then
 # another worker set it status to finished, then we defer job with
 # already finished dependency.  It will never be executed.
@@ -751,7 +775,140 @@ def test_finish_job_finished_registry_negative_ttl(redis):
     assert finish == [id, -1]
 
 
-# TODO: process dependents keys
+def test_finish_job_enqueue_dependents(redis):
+    """Finish job will enqueue its dependents."""
+
+    queue = b'default'
+    parent_id = b'56e6ba45-1aa3-4724-8c9f-51b7b0031cee'
+    id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
+    parent_spec = {
+        b'created_at': b'2016-04-05T22:40:35Z',
+        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+        b'description': b'fixtures.some_calculation(3, 4, z=2)',
+        b'timeout': 180,
+    }
+    spec = {
+        b'created_at': b'2016-04-05T22:40:35Z',
+        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+        b'description': b'fixtures.some_calculation(3, 4, z=2)',
+        b'timeout': 180,
+        b'dependency_id': parent_id,
+    }
+    yield from enqueue_job(redis, queue, parent_id, parent_spec)
+    yield from enqueue_job(redis, queue, id, spec)
+    stored_id, stored_spec = yield from dequeue_job(redis, queue)
+    yield from start_job(redis, queue, stored_id, stored_spec)
+    yield from finish_job(redis, stored_id, stored_spec)
+    assert (yield from redis.lrange(queue_key(queue), 0, -1)) == [id]
+
+
+def test_finish_job_enqueue_dependents_status(redis):
+    """Finish job will set dependents status to QUEUED."""
+
+    queue = b'default'
+    parent_id = b'56e6ba45-1aa3-4724-8c9f-51b7b0031cee'
+    id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
+    parent_spec = {
+        b'created_at': b'2016-04-05T22:40:35Z',
+        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+        b'description': b'fixtures.some_calculation(3, 4, z=2)',
+        b'timeout': 180,
+    }
+    spec = {
+        b'created_at': b'2016-04-05T22:40:35Z',
+        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+        b'description': b'fixtures.some_calculation(3, 4, z=2)',
+        b'timeout': 180,
+        b'dependency_id': parent_id,
+    }
+    yield from enqueue_job(redis, queue, parent_id, parent_spec)
+    yield from enqueue_job(redis, queue, id, spec)
+    stored_id, stored_spec = yield from dequeue_job(redis, queue)
+    yield from start_job(redis, queue, stored_id, stored_spec)
+    yield from finish_job(redis, stored_id, stored_spec)
+    assert (yield from redis.hget(job_key(id), b'status')) == JobStatus.QUEUED
+
+
+def test_finish_job_dependents_enqueue_date(redis):
+    """Finish job will enqueue its dependents with proper date field."""
+
+    queue = b'default'
+    parent_id = b'56e6ba45-1aa3-4724-8c9f-51b7b0031cee'
+    id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
+    parent_spec = {
+        b'created_at': b'2016-04-05T22:40:35Z',
+        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+        b'description': b'fixtures.some_calculation(3, 4, z=2)',
+        b'timeout': 180,
+    }
+    spec = {
+        b'created_at': b'2016-04-05T22:40:35Z',
+        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+        b'description': b'fixtures.some_calculation(3, 4, z=2)',
+        b'timeout': 180,
+        b'dependency_id': parent_id,
+    }
+    yield from enqueue_job(redis, queue, parent_id, parent_spec)
+    yield from enqueue_job(redis, queue, id, spec)
+    stored_id, stored_spec = yield from dequeue_job(redis, queue)
+    yield from start_job(redis, queue, stored_id, stored_spec)
+    yield from finish_job(redis, stored_id, stored_spec)
+    enqueued_at = yield from redis.hget(job_key(id), b'enqueued_at')
+    assert enqueued_at == utcformat(utcnow())
+
+
+def test_finish_job_cleanup_dependents(redis):
+    """Finish job will cleanup parent job dependents set."""
+
+    queue = b'default'
+    parent_id = b'56e6ba45-1aa3-4724-8c9f-51b7b0031cee'
+    id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
+    parent_spec = {
+        b'created_at': b'2016-04-05T22:40:35Z',
+        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+        b'description': b'fixtures.some_calculation(3, 4, z=2)',
+        b'timeout': 180,
+    }
+    spec = {
+        b'created_at': b'2016-04-05T22:40:35Z',
+        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+        b'description': b'fixtures.some_calculation(3, 4, z=2)',
+        b'timeout': 180,
+        b'dependency_id': parent_id,
+    }
+    yield from enqueue_job(redis, queue, parent_id, parent_spec)
+    yield from enqueue_job(redis, queue, id, spec)
+    stored_id, stored_spec = yield from dequeue_job(redis, queue)
+    yield from start_job(redis, queue, stored_id, stored_spec)
+    yield from finish_job(redis, stored_id, stored_spec)
+    assert not (yield from redis.smembers(dependents(parent_id)))
+
+
+def test_finish_job_dependents_defered_registry(redis):
+    """Finish job will remove its dependents from deferred job registries."""
+
+    queue = b'default'
+    parent_id = b'56e6ba45-1aa3-4724-8c9f-51b7b0031cee'
+    id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
+    parent_spec = {
+        b'created_at': b'2016-04-05T22:40:35Z',
+        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+        b'description': b'fixtures.some_calculation(3, 4, z=2)',
+        b'timeout': 180,
+    }
+    spec = {
+        b'created_at': b'2016-04-05T22:40:35Z',
+        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+        b'description': b'fixtures.some_calculation(3, 4, z=2)',
+        b'timeout': 180,
+        b'dependency_id': parent_id,
+    }
+    yield from enqueue_job(redis, queue, parent_id, parent_spec)
+    yield from enqueue_job(redis, queue, id, spec)
+    stored_id, stored_spec = yield from dequeue_job(redis, queue)
+    yield from start_job(redis, queue, stored_id, stored_spec)
+    yield from finish_job(redis, stored_id, stored_spec)
+    assert not (yield from deferred_jobs(redis, queue))
 
 
 # Fail job.
