@@ -5,27 +5,11 @@
 
 *** job_result
 
-*** enqueue_job
-
-**** lpush (at front)
-
 *** cleanup registries
 
 *** suspension
 
-*** dependents
-
-**** delete
-
-**** deferred
-
-**** queue empty
-
-**** enqueue
-
-*** worker_birth (start worker)
-
-*** worker_death (kill worker)
+*** around dequeue job -> worker heartbeat (expire worker key)
 
 ** adapt jobs, queues and workers to use this protocol layer
    Leave only public methods on each component
