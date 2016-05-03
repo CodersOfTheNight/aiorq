@@ -62,13 +62,6 @@
 
 * remove rq dependency
 
-** abandon connections module
-   Pass explicit pool parameter for job, queue and worker.
-
-** remove resolve_connection function
-
-** drop job decorator
-
 * python 3.5 async/await syntax support
   - async for job in Queue
 
