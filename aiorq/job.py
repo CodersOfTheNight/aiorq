@@ -11,6 +11,7 @@
 # and released under 2-clause BSD license.
 
 import asyncio
+import inspect
 import pickle
 
 from .protocol import job_status
@@ -59,8 +60,12 @@ def dumps(job):
     """Create protocol job spec from job instance."""
 
     id = job.id.encode()
-    func_name = '{}.{}'.format(job.func.__module__, job.func.__name__)
-    instance = None
+    if inspect.ismethod(job.func):
+        func_name = job.func.__name__
+        instance = job.func.__self__
+    else:
+        func_name = '{}.{}'.format(job.func.__module__, job.func.__name__)
+        instance = None
     data = func_name, instance, job.args, job.kwargs
     spec = {}
     spec[b'created_at'] = utcformat(job.created_at)
@@ -81,7 +86,10 @@ def loads(id, spec):
     created_at = utcparse(spec[b'created_at'])
     enqueued_at = utcparse(spec[b'enqueued_at'])
     func_name, instance, args, kwargs = pickle.loads(spec[b'data'])
-    func = import_attribute(func_name)
+    if instance:
+        func = getattr(instance, func_name)
+    else:
+        func = import_attribute(func_name)
     description = spec[b'description'].decode()
     status = spec[b'status'].decode()
     origin = spec[b'origin'].decode()
