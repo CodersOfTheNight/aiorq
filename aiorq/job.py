@@ -11,10 +11,11 @@
 # and released under 2-clause BSD license.
 
 import asyncio
+import pickle
 
 from .protocol import job_status
-from .specs import UNEVALUATED, JobStatus
-from .utils import utcnow
+from .specs import JobStatus
+from .utils import utcparse, import_attribute
 
 
 @asyncio.coroutine
@@ -63,18 +64,49 @@ def dumps(job):
 def loads(id, spec):
     """Create job instance from job id and protocol job spec."""
 
-    return None
+    created_at = utcparse(spec[b'created_at'])
+    enqueued_at = utcparse(spec[b'enqueued_at'])
+    func_name, instance, args, kwargs = pickle.loads(spec[b'data'])
+    func = import_attribute(func_name)
+    description = spec[b'description'].decode()
+    status = spec[b'status'].decode()
+    origin = spec[b'origin'].decode()
+    timeout = spec[b'timeout']
+    result_ttl = spec[b'result_ttl']
+    job = Job(id=id, created_at=created_at, enqueued_at=enqueued_at,
+              func=func, instance=instance, args=args, kwargs=kwargs,
+              description=description, timeout=timeout,
+              result_ttl=result_ttl, status=status, origin=origin)
+    return job
 
 
 class Job:
     """A Job is just convenient data structure to pass around (meta) data."""
 
+    def __init__(self, id, created_at, enqueued_at, func, instance,
+                 args, kwargs, description, timeout, result_ttl,
+                 status, origin):
+
+        self.id = id
+        self.created_at = created_at
+        self.func = func
+        self.instance = instance
+        self.args = args
+        self.kwargs = kwargs
+        self.description = description
+        self.timeout = timeout
+        self.result_ttl = result_ttl
+        self.status = status
+        self.origin = origin
+        self.enqueued_at = enqueued_at
+
     @asyncio.coroutine
     def get_status(self):
         """Get job status asynchronously."""
 
-        self._status = yield from job_status(self.connection, self.id)
-        return self._status.decode()
+        status = yield from job_status(self.connection, self.id)
+        self.status = status.decode()
+        return self.status
 
     @property
     @asyncio.coroutine
@@ -99,30 +131,6 @@ class Job:
     def is_started(self):
 
         return (yield from self.get_status()) == JobStatus.STARTED
-
-    def __init__(self, id=None, connection=None):
-
-        self.connection = connection
-        self._id = id
-        self.created_at = utcnow()
-        self._data = UNEVALUATED
-        self._func_name = UNEVALUATED
-        self._instance = UNEVALUATED
-        self._args = UNEVALUATED
-        self._kwargs = UNEVALUATED
-        self.description = None
-        self.origin = None
-        self.enqueued_at = None
-        self.started_at = None
-        self.ended_at = None
-        self._result = None
-        self.exc_info = None
-        self.timeout = None
-        self.result_ttl = None
-        self.ttl = None
-        self._status = None
-        self._dependency_id = None
-        self.meta = {}
 
     @property
     @asyncio.coroutine

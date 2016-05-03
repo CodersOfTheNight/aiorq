@@ -10,6 +10,7 @@
 
 from calendar import timegm
 from datetime import datetime
+from importlib import import_module
 
 
 def current_timestamp():
@@ -28,3 +29,11 @@ def utcformat(dt):
 
 def utcnow():
     return datetime.utcnow()
+
+
+def import_attribute(name):
+    """Return an attribute from a dotted path name (e.g. "path.to.func")."""
+
+    module_name, attribute = name.rsplit('.', 1)
+    module = import_module(module_name)
+    return getattr(module, attribute)

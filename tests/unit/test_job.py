@@ -1,4 +1,5 @@
 import time
+from datetime import datetime
 
 import pytest
 
@@ -7,11 +8,40 @@ from aiorq import (cancel_job, get_current_job, requeue_job, Queue,
 from aiorq.exceptions import NoSuchJobError, UnpickleError
 from aiorq.job import Job, loads, dumps
 from aiorq.specs import JobStatus
-from aiorq.utils import utcformat
+from aiorq.utils import utcformat, utcnow
 from fixtures import (Number, some_calculation, say_hello,
                       CallableObject, access_self, long_running_job,
                       echo, UnicodeStringObject, div_by_zero)
 from helpers import strip_microseconds
+
+
+def test_loads():
+    """Loads job form the job spec."""
+
+    queue = b'default'
+    id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
+    spec = {
+        b'created_at': b'2016-04-05T22:40:35Z',
+        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+        b'description': b'fixtures.some_calculation(3, 4, z=2)',
+        b'timeout': 180,
+        b'result_ttl': 5000,
+        b'status': JobStatus.QUEUED,
+        b'origin': queue,
+        b'enqueued_at': b'2016-05-03T12:10:11Z',
+    }
+    job = loads(id, spec)
+    assert job.created_at == datetime(2016, 4, 5, 22, 40, 35)
+    assert job.func == some_calculation
+    assert job.instance is None
+    assert job.args == (3, 4)
+    assert job.kwargs == {'z': 2}
+    assert job.description == 'fixtures.some_calculation(3, 4, z=2)'
+    assert job.timeout == 180
+    assert job.result_ttl == 5000
+    assert job.status == 'queued'
+    assert job.origin == 'default'
+    assert job.enqueued_at == datetime(2016, 5, 3, 12, 10, 11)
 
 
 def test_unicode():
