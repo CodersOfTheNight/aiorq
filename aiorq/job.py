@@ -112,6 +112,25 @@ def loads(id, spec):
     return job
 
 
+def description(func, args, kwargs):
+    """String representation of the call."""
+
+    if isinstance(func, str):
+        func_name = func
+    elif isinstance(func, bytes):
+        func_name = func.decode()
+    elif inspect.isfunction(func) or inspect.isbuiltin(func):
+        func_name = '{}.{}'.format(func.__module__, func.__name__)
+    elif not inspect.ismethod(func) and hasattr(func, '__call__'):
+        func_name = '__call__'
+    else:
+        func_name = func.__name__
+    args_name = [repr(a) for a in args]
+    args_name += ['{}={!r}'.format(k, v) for k, v in kwargs.items()]
+    args_name = ', '.join(args_name)
+    return '{}({})'.format(func_name, args_name)
+
+
 class Job:
     """A Job is just convenient data structure to pass around (meta) data."""
 

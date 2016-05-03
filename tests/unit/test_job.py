@@ -7,7 +7,7 @@ import pytest
 from aiorq import (cancel_job, get_current_job, requeue_job, Queue,
                    get_failed_queue, Worker)
 from aiorq.exceptions import NoSuchJobError
-from aiorq.job import Job, loads, dumps
+from aiorq.job import Job, loads, dumps, description
 from aiorq.specs import JobStatus
 from aiorq.utils import utcformat, utcnow
 from fixtures import (Number, some_calculation, say_hello,
@@ -339,6 +339,30 @@ def test_loads_unimportable_data(redis):
     }
     with pytest.raises(AttributeError):
         loads(id, spec)
+
+
+# Description.
+
+
+def test_description():
+    """Make job description."""
+
+    n = Number(2)
+    kallable = CallableObject()
+    desc = description(some_calculation, (3, 4), {'z': 2})
+    assert desc == 'fixtures.some_calculation(3, 4, z=2)'
+    desc = description(n.div, (4,), {})
+    assert desc == 'div(4)'
+    desc = description('fixtures.say_hello', ('World',), {})
+    assert desc == "fixtures.say_hello('World')"
+    desc = description(b'fixtures.say_hello', ('World',), {})
+    assert desc == "fixtures.say_hello('World')"
+    desc = description(len, ([],), {})
+    assert desc == 'builtins.len([])'
+    desc = description(kallable, (), {})
+    assert desc == '__call__()'
+    desc = description(l, (), {})
+    assert desc == 'fixtures.<lambda>()'
 
 
 # Job.
