@@ -187,6 +187,7 @@ def enqueue_job(redis, queue, id, spec, *, at_front=False):
             multi.lpush(queue_key(queue), id)
         else:
             multi.rpush(queue_key(queue), id)
+    # TODO: do we need expire job hash?
     yield from multi.execute()
 
 
