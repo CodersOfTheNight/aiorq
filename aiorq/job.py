@@ -60,12 +60,16 @@ def dumps(job):
     """Create protocol job spec from job instance."""
 
     id = job.id.encode()
+    instance = None
     if inspect.ismethod(job.func):
         func_name = job.func.__name__
         instance = job.func.__self__
+    elif isinstance(job.func, str):
+        func_name = job.func
+    elif isinstance(job.func, bytes):
+        func_name = job.func.decode()
     else:
         func_name = '{}.{}'.format(job.func.__module__, job.func.__name__)
-        instance = None
     data = func_name, instance, job.args, job.kwargs
     spec = {}
     spec[b'created_at'] = utcformat(job.created_at)
