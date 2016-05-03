@@ -34,7 +34,6 @@ def test_loads():
     assert job.id == '2a5079e7-387b-492f-a81c-68aa55c194c8'
     assert job.created_at == datetime(2016, 4, 5, 22, 40, 35)
     assert job.func == some_calculation
-    assert job.instance is None
     assert job.args == (3, 4)
     assert job.kwargs == {'z': 2}
     assert job.description == 'fixtures.some_calculation(3, 4, z=2)'
@@ -52,7 +51,6 @@ def test_dumps():
         id='2a5079e7-387b-492f-a81c-68aa55c194c8',
         created_at=datetime(2016, 4, 5, 22, 40, 35),
         func=some_calculation,
-        instance=None,
         args=(3, 4),
         kwargs={'z': 2},
         description='fixtures.some_calculation(3, 4, z=2)',

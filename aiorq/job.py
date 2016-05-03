@@ -60,7 +60,8 @@ def dumps(job):
 
     id = job.id.encode()
     func_name = '{}.{}'.format(job.func.__module__, job.func.__name__)
-    data = func_name, job.instance, job.args, job.kwargs
+    instance = None
+    data = func_name, instance, job.args, job.kwargs
     spec = {}
     spec[b'created_at'] = utcformat(job.created_at)
     spec[b'enqueued_at'] = utcformat(job.enqueued_at)
@@ -76,6 +77,7 @@ def dumps(job):
 def loads(id, spec):
     """Create job instance from job id and protocol job spec."""
 
+    job_id = id.decode()
     created_at = utcparse(spec[b'created_at'])
     enqueued_at = utcparse(spec[b'enqueued_at'])
     func_name, instance, args, kwargs = pickle.loads(spec[b'data'])
@@ -85,9 +87,9 @@ def loads(id, spec):
     origin = spec[b'origin'].decode()
     timeout = spec[b'timeout']
     result_ttl = spec[b'result_ttl']
-    job = Job(id=id, created_at=created_at, enqueued_at=enqueued_at,
-              func=func, instance=instance, args=args, kwargs=kwargs,
-              description=description, timeout=timeout,
+    job = Job(id=job_id, created_at=created_at,
+              enqueued_at=enqueued_at, func=func, args=args,
+              kwargs=kwargs, description=description, timeout=timeout,
               result_ttl=result_ttl, status=status, origin=origin)
     return job
 
@@ -95,14 +97,13 @@ def loads(id, spec):
 class Job:
     """A Job is just convenient data structure to pass around (meta) data."""
 
-    def __init__(self, id, created_at, enqueued_at, func, instance,
-                 args, kwargs, description, timeout, result_ttl,
-                 status, origin):
+    def __init__(self, id, created_at, enqueued_at, func, args,
+                 kwargs, description, timeout, result_ttl, status,
+                 origin):
 
         self.id = id
         self.created_at = created_at
         self.func = func
-        self.instance = instance
         self.args = args
         self.kwargs = kwargs
         self.description = description
