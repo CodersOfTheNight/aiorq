@@ -363,17 +363,11 @@ def test_description():
     assert desc == '__call__()'
     desc = description(l, (), {})
     assert desc == 'fixtures.<lambda>()'
+    desc = description('myfunc', [12, '☃'], {'snowman': '☃'})
+    assert desc == "myfunc(12, '☃', snowman='☃')"
 
 
 # Job.
-
-
-def test_unicode():
-    """Unicode in job description."""
-
-    job = Job('myfunc', args=[12, "☃"], kwargs=dict(snowman="☃", null=None))
-    expected_string = "myfunc(12, '☃', null=None, snowman='☃')"
-    assert job.description, expected_string
 
 
 def test_custom_meta_is_persisted(redis):
