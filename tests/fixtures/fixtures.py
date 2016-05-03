@@ -2,7 +2,6 @@ import asyncio
 from unittest.mock import Mock
 
 from aiorq import get_current_job
-from aiorq.decorators import job
 
 
 @asyncio.coroutine
@@ -60,7 +59,7 @@ def echo(*args, **kwargs):
     return (args, kwargs)
 
 
-class UnicodeStringObject(object):
+class UnicodeStringObject:
 
     def __repr__(self):
 
@@ -71,13 +70,6 @@ class UnicodeStringObject(object):
 def div_by_zero(x):
 
     return x / 0
-
-
-@job(queue='default')
-@asyncio.coroutine
-def decorated_job(x, y):
-
-    return x + y
 
 
 mock = Mock()
