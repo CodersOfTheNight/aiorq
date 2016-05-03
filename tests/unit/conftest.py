@@ -4,11 +4,8 @@ import gc
 
 import aioredis
 import pytest
-import rq
 
-from aiorq import pop_connection, push_connection
-from aiorq.connections import _connection_stack
-from aiorq.registry import StartedJobRegistry
+import aiorq
 
 
 # Fixtures.
@@ -53,29 +50,10 @@ def set_loop():
 
 
 @pytest.fixture
-def registry():
-    """Suppress pytest errors about missing fixtures.
-
-    Actual StartedJobRegistry instance will be inserted by
-    asynchronous test decorator instead of this fixture.
-
-    """
-
-    pass
-
-
-@pytest.fixture
 def timestamp():
     """Current timestamp."""
 
-    return rq.utils.current_timestamp()
-
-
-@pytest.fixture
-def connect():
-    """aioredis.Redis connection factory."""
-
-    return find_connection
+    return aiorq.utils.current_timestamp()
 
 
 # Collector.
@@ -118,30 +96,19 @@ def async_test(f):
         @asyncio.coroutine
         def coroutine(loop, kwargs):
             redis = yield from find_connection(loop)
-            push_connection(redis)
             if 'redis' in kwargs:
                 kwargs['redis'] = redis
             if 'loop' in kwargs:
                 kwargs['loop'] = loop
-            if 'registry' in kwargs:
-                kwargs['registry'] = StartedJobRegistry(connection=redis)
             try:
                 yield from asyncio.coroutine(f)(**kwargs)
             except Exception:
                 raise
-            else:
-                connection = pop_connection()
-                assert connection == redis, (
-                    'Wow, something really nasty happened to the '
-                    'Redis connection stack. Check your setup.')
             finally:
                 yield from redis.flushdb()
                 redis.close()
                 yield from redis.wait_closed()
-                rq.local.release_local(_connection_stack)
 
-        assert not len(_connection_stack), \
-            'Test require empty connection stack'
         loop = asyncio.new_event_loop()
         if 'set_loop' in kwargs:
             asyncio.set_event_loop(loop)

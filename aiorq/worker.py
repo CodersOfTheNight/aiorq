@@ -27,11 +27,9 @@ from rq.utils import (ensure_list, import_attribute, utcformat, utcnow,
                       as_text, utcparse)
 
 from .compat import ensure_future
-from .connections import resolve_connection
 from .exceptions import DequeueTimeout, JobTimeoutException
 from .job import Job
 from .queue import Queue, get_failed_queue
-from .registry import clean_registries, StartedJobRegistry, FinishedJobRegistry
 from .suspension import is_suspended
 
 
@@ -49,7 +47,7 @@ class Worker:
     def __init__(self, queues, name=None, default_result_ttl=None,
                  connection=None, exception_handlers=None,
                  default_worker_ttl=None, job_class=None):
-        self.connection = resolve_connection(connection)
+        self.connection = connection
 
         # TODO: assert against empty queues.
         # TODO: test worker creation without global connection.

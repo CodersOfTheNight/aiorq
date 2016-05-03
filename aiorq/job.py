@@ -19,7 +19,6 @@ from rq.job import (Job as SynchronousJob, UNEVALUATED, loads,
 from rq.job import dumps        # noqa
 from rq.local import LocalStack
 
-from .connections import resolve_connection
 from .exceptions import NoSuchJobError
 
 
@@ -110,11 +109,10 @@ class Job(SynchronousJob):
 
     @classmethod
     @asyncio.coroutine
-    def exists(cls, job_id, connection=None):
+    def exists(cls, job_id, connection):
         """Returns whether a job hash exists for the given job ID."""
 
-        conn = resolve_connection(connection)
-        return (yield from conn.exists(cls.key_for(job_id)))
+        return (yield from connection.exists(cls.key_for(job_id)))
 
     @property
     @asyncio.coroutine
@@ -148,7 +146,7 @@ class Job(SynchronousJob):
 
     def __init__(self, id=None, connection=None):
 
-        self.connection = resolve_connection(connection)
+        self.connection = connection
         self._id = id
         self.created_at = utcnow()
         self._data = UNEVALUATED

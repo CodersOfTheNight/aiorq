@@ -19,7 +19,6 @@ from rq.job import JobStatus
 from rq.compat import as_text
 from rq.utils import utcnow, import_attribute
 
-from .connections import resolve_connection
 from .exceptions import (NoSuchJobError, UnpickleError,
                          DequeueTimeout, InvalidJobOperationError)
 from .job import Job
@@ -45,7 +44,7 @@ class Queue:
     def all(cls, connection=None):
         """Returns an iterable of all Queues."""
 
-        connection = resolve_connection(connection)
+        connection = connection
         rq_keys = yield from connection.smembers(cls.redis_queues_keys)
 
         def to_queue(queue_key):
@@ -70,7 +69,7 @@ class Queue:
     def __init__(self, name='default', default_timeout=None, connection=None,
                  job_class=None):
 
-        self.connection = resolve_connection(connection)
+        self.connection = connection
         prefix = self.redis_queue_namespace_prefix
         self.name = name
         self._key = '{0}{1}'.format(prefix, name)
@@ -367,7 +366,7 @@ class Queue:
 
     @classmethod
     @asyncio.coroutine
-    def lpop(cls, queue_keys, timeout, connection=None):
+    def lpop(cls, queue_keys, timeout, connection):
         """Helper method.  Intermediate method to abstract away from some
         Redis API details, where LPOP accepts only a single key,
         whereas BLPOP accepts multiple.  So if we want the
@@ -382,7 +381,6 @@ class Queue:
              > 0 - maximum number of seconds to block
         """
 
-        connection = resolve_connection(connection)
         if timeout is not None:
             if timeout == 0:
                 raise ValueError(
