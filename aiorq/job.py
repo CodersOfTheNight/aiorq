@@ -15,7 +15,7 @@ import pickle
 
 from .protocol import job_status
 from .specs import JobStatus
-from .utils import utcparse, import_attribute
+from .utils import utcformat, utcparse, import_attribute
 
 
 @asyncio.coroutine
@@ -58,7 +58,19 @@ def get_current_job(connection=None):
 def dumps(job):
     """Create protocol job spec from job instance."""
 
-    return None, {}
+    id = job.id.encode()
+    func_name = '{}.{}'.format(job.func.__module__, job.func.__name__)
+    data = func_name, job.instance, job.args, job.kwargs
+    spec = {}
+    spec[b'created_at'] = utcformat(job.created_at)
+    spec[b'enqueued_at'] = utcformat(job.enqueued_at)
+    spec[b'data'] = pickle.dumps(data, protocol=pickle.HIGHEST_PROTOCOL)
+    spec[b'description'] = job.description.encode()
+    spec[b'status'] = job.status.encode()
+    spec[b'origin'] = job.origin.encode()
+    spec[b'timeout'] = job.timeout
+    spec[b'result_ttl'] = job.result_ttl
+    return id, spec
 
 
 def loads(id, spec):

@@ -31,6 +31,7 @@ def test_loads():
         b'enqueued_at': b'2016-05-03T12:10:11Z',
     }
     job = loads(id, spec)
+    assert job.id == '2a5079e7-387b-492f-a81c-68aa55c194c8'
     assert job.created_at == datetime(2016, 4, 5, 22, 40, 35)
     assert job.func == some_calculation
     assert job.instance is None
@@ -42,6 +43,36 @@ def test_loads():
     assert job.status == 'queued'
     assert job.origin == 'default'
     assert job.enqueued_at == datetime(2016, 5, 3, 12, 10, 11)
+
+
+def test_dumps():
+    """Dumps job spec from the job."""
+
+    job = Job(
+        id='2a5079e7-387b-492f-a81c-68aa55c194c8',
+        created_at=datetime(2016, 4, 5, 22, 40, 35),
+        func=some_calculation,
+        instance=None,
+        args=(3, 4),
+        kwargs={'z': 2},
+        description='fixtures.some_calculation(3, 4, z=2)',
+        timeout=180,
+        result_ttl=5000,
+        status='queued',
+        origin='default',
+        enqueued_at=datetime(2016, 5, 3, 12, 10, 11))
+    id, spec = dumps(job)
+    assert id == b'2a5079e7-387b-492f-a81c-68aa55c194c8'
+    assert spec == {
+        b'created_at': b'2016-04-05T22:40:35Z',
+        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+        b'description': b'fixtures.some_calculation(3, 4, z=2)',
+        b'timeout': 180,
+        b'result_ttl': 5000,
+        b'status': JobStatus.QUEUED,
+        b'origin': b'default',
+        b'enqueued_at': b'2016-05-03T12:10:11Z',
+    }
 
 
 def test_unicode():

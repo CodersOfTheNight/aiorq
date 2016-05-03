@@ -265,6 +265,7 @@ def finish_job(redis, id, spec):
         return
     else:
         result_ttl = spec[b'result_ttl']
+    # TODO: set result
     fields = (b'status', JobStatus.FINISHED,
               b'ended_at', utcformat(utcnow()))
     score = result_ttl if result_ttl < 0 else current_timestamp() + result_ttl
