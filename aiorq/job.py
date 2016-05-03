@@ -79,13 +79,17 @@ def dumps(job):
     data = func_name, instance, job.args, job.kwargs
     spec = {}
     spec[b'created_at'] = utcformat(job.created_at)
-    spec[b'enqueued_at'] = utcformat(job.enqueued_at)
+    if job.enqueued_at:
+        spec[b'enqueued_at'] = utcformat(job.enqueued_at)
     spec[b'data'] = pickle.dumps(data, protocol=pickle.HIGHEST_PROTOCOL)
     spec[b'description'] = job.description.encode()
-    spec[b'status'] = job.status.encode()
+    if job.status:
+        spec[b'status'] = job.status.encode()
     spec[b'origin'] = job.origin.encode()
     spec[b'timeout'] = job.timeout
     spec[b'result_ttl'] = job.result_ttl
+    if job.dependency_id:
+        spec[b'dependency_id'] = job.dependency_id.encode()
     return id, spec
 
 
@@ -134,27 +138,29 @@ def description(func, args, kwargs):
 class Job:
     """A Job is just convenient data structure to pass around (meta) data."""
 
-    def __init__(self, id, created_at, enqueued_at, func, args,
-                 kwargs, description, timeout, result_ttl, status,
-                 origin):
+    def __init__(self, connection, id, func, args, kwargs, description,
+                 timeout, result_ttl, origin, created_at,
+                 enqueued_at=None, status=None, dependency_id=None):
 
+        self.connection = connection
         self.id = id
-        self.created_at = created_at
         self.func = func
         self.args = args
         self.kwargs = kwargs
         self.description = description
         self.timeout = timeout
         self.result_ttl = result_ttl
-        self.status = status
         self.origin = origin
-        self.enqueued_at = enqueued_at
+        self.created_at = created_at
+        self.enqueued_at = enqueued_at  # TODO: don't store in spec if None
+        self.status = status  # TODO: don't store in spec if None
+        self.dependency_id = dependency_id  # TODO: don't store in spec if None
 
     @asyncio.coroutine
     def get_status(self):
         """Get job status asynchronously."""
 
-        status = yield from job_status(self.connection, self.id)
+        status = yield from job_status(self.connection, self.id.encode())
         self.status = status.decode()
         return self.status
 
@@ -162,25 +168,41 @@ class Job:
     @asyncio.coroutine
     def is_finished(self):
 
-        return (yield from self.get_status()) == JobStatus.FINISHED
+        status = yield from job_status(self.connection, self.id.encode())
+        self.status = status.decode()
+        return status == JobStatus.FINISHED
 
     @property
     @asyncio.coroutine
     def is_queued(self):
 
-        return (yield from self.get_status()) == JobStatus.QUEUED
+        status = yield from job_status(self.connection, self.id.encode())
+        self.status = status.decode()
+        return status == JobStatus.QUEUED
 
     @property
     @asyncio.coroutine
     def is_failed(self):
 
-        return (yield from self.get_status()) == JobStatus.FAILED
+        status = yield from job_status(self.connection, self.id.encode())
+        self.status = status.decode()
+        return status == JobStatus.FAILED
 
     @property
     @asyncio.coroutine
     def is_started(self):
 
-        return (yield from self.get_status()) == JobStatus.STARTED
+        status = yield from job_status(self.connection, self.id.encode())
+        return status == JobStatus.STARTED
+        self.status = status.decode()
+
+    @property
+    @asyncio.coroutine
+    def is_deferred(self):
+
+        status = yield from job_status(self.connection, self.id.encode())
+        self.status = status.decode()
+        return status == JobStatus.DEFERRED
 
     @property
     @asyncio.coroutine

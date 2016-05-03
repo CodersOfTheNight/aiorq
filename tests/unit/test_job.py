@@ -8,6 +8,8 @@ from aiorq import (cancel_job, get_current_job, requeue_job, Queue,
                    get_failed_queue, Worker)
 from aiorq.exceptions import NoSuchJobError
 from aiorq.job import Job, loads, dumps, description
+from aiorq.protocol import (enqueue_job, dequeue_job, start_job,
+                            finish_job, fail_job)
 from aiorq.specs import JobStatus
 from aiorq.utils import utcformat, utcnow
 from fixtures import (Number, some_calculation, say_hello,
@@ -19,10 +21,11 @@ from helpers import strip_microseconds
 # Dumps.
 
 
-def test_dumps():
+def test_dumps(redis):
     """Dumps job spec from the job."""
 
     job = Job(
+        connection=redis,
         id='2a5079e7-387b-492f-a81c-68aa55c194c8',
         created_at=datetime(2016, 4, 5, 22, 40, 35),
         func=some_calculation,
@@ -48,11 +51,12 @@ def test_dumps():
     }
 
 
-def test_dumps_instance_method():
+def test_dumps_instance_method(redis):
     """Dumps job spec from the instance method job."""
 
     n = Number(2)
     job = Job(
+        connection=redis,
         id='2a5079e7-387b-492f-a81c-68aa55c194c8',
         created_at=datetime(2016, 4, 5, 22, 40, 35),
         func=n.div,
@@ -78,10 +82,11 @@ def test_dumps_instance_method():
     }
 
 
-def test_dumps_string_function():
+def test_dumps_string_function(redis):
     """Dump job spec from the string function job."""
 
     job = Job(
+        connection=redis,
         id='2a5079e7-387b-492f-a81c-68aa55c194c8',
         created_at=datetime(2016, 4, 5, 22, 40, 35),
         func='fixtures.say_hello',
@@ -107,10 +112,11 @@ def test_dumps_string_function():
     }
 
 
-def test_dumps_bytes_function():
+def test_dumps_bytes_function(redis):
     """Dump job spec from the bytes function job."""
 
     job = Job(
+        connection=redis,
         id='2a5079e7-387b-492f-a81c-68aa55c194c8',
         created_at=datetime(2016, 4, 5, 22, 40, 35),
         func=b'fixtures.say_hello',
@@ -136,10 +142,11 @@ def test_dumps_bytes_function():
     }
 
 
-def test_dumps_builtin():
+def test_dumps_builtin(redis):
     """Dump job spec from the builtin job."""
 
     job = Job(
+        connection=redis,
         id='2a5079e7-387b-492f-a81c-68aa55c194c8',
         created_at=datetime(2016, 4, 5, 22, 40, 35),
         func=len,
@@ -165,11 +172,12 @@ def test_dumps_builtin():
     }
 
 
-def test_dumps_callable_object():
+def test_dumps_callable_object(redis):
     """Dump job spec from the callable object job."""
 
     kallable = CallableObject()
     job = Job(
+        connection=redis,
         id='2a5079e7-387b-492f-a81c-68aa55c194c8',
         created_at=datetime(2016, 4, 5, 22, 40, 35),
         func=kallable,
@@ -195,10 +203,11 @@ def test_dumps_callable_object():
     }
 
 
-def test_dumps_lambda_function():
+def test_dumps_lambda_function(redis):
     """Dump job spec from the lambda function job."""
 
     job = Job(
+        connection=redis,
         id='2a5079e7-387b-492f-a81c-68aa55c194c8',
         created_at=datetime(2016, 4, 5, 22, 40, 35),
         func=l,
@@ -224,10 +233,11 @@ def test_dumps_lambda_function():
     }
 
 
-def test_dumps_broken_func():
+def test_dumps_broken_func(redis):
     """Raise type error if func argument is unusable."""
 
     job = Job(
+        connection=redis,
         id='2a5079e7-387b-492f-a81c-68aa55c194c8',
         created_at=datetime(2016, 4, 5, 22, 40, 35),
         func=1,
@@ -370,6 +380,51 @@ def test_description():
 # Job.
 
 
+def test_job_status(redis):
+    """Access job status checkers like is_started."""
+
+    job = Job(
+        connection=redis,
+        id='56e6ba45-1aa3-4724-8c9f-51b7b0031cee',
+        created_at=datetime(2016, 4, 5, 22, 40, 35),
+        func=some_calculation,
+        args=(3, 4),
+        kwargs={'z': 2},
+        description='fixtures.some_calculation(3, 4, z=2)',
+        timeout=180,
+        result_ttl=5000,
+        origin='default')
+    id, spec = dumps(job)
+    queue = spec[b'origin']
+    yield from enqueue_job(redis, queue, id, spec)
+    assert (yield from job.is_queued)
+    stored_id, stored_spec = yield from dequeue_job(redis, queue)
+    yield from start_job(redis, queue, id, stored_spec)
+    assert (yield from job.is_started)
+    yield from finish_job(redis, id, stored_spec)
+    assert (yield from job.is_finished)
+    yield from fail_job(redis, queue, id, b"Exception('We are here')")
+    assert (yield from job.is_failed)
+    deferred_job = Job(
+        connection=redis,
+        id='2a5079e7-387b-492f-a81c-68aa55c194c8',
+        created_at=datetime(2016, 4, 5, 22, 40, 35),
+        func=some_calculation,
+        args=(3, 4),
+        kwargs={'z': 2},
+        description='fixtures.some_calculation(3, 4, z=2)',
+        timeout=180,
+        result_ttl=5000,
+        origin='default',
+        dependency_id=job.id)
+    deferred_id, deferred_spec = dumps(deferred_job)
+    deferred_queue = deferred_spec[b'origin']
+    yield from enqueue_job(redis, deferred_queue, deferred_id, deferred_spec)
+    assert (yield from job.is_deferred)
+    status = yield from job.get_status()
+    assert status == 'deferred'
+
+
 def test_custom_meta_is_persisted(redis):
     """Additional meta data on jobs are stored persisted correctly."""
 
@@ -508,17 +563,3 @@ def test_create_job_with_ttl_should_expire(redis):
     queue.enqueue(say_hello, job_id="1234", ttl=1)
     time.sleep(1)
     assert not len((yield from queue.get_jobs()))
-
-
-def test_job_status():
-    """Access job status checkers like is_started."""
-
-    job = Job()
-    yield from job.set_status(JobStatus.FINISHED)
-    assert (yield from job.is_finished)
-    yield from job.set_status(JobStatus.QUEUED)
-    assert (yield from job.is_queued)
-    yield from job.set_status(JobStatus.FAILED)
-    assert (yield from job.is_failed)
-    yield from job.set_status(JobStatus.STARTED)
-    assert (yield from job.is_started)
