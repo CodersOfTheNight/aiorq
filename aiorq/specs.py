@@ -9,9 +9,6 @@
 """
 
 
-UNEVALUATED = object()
-
-
 class JobStatus:
 
     QUEUED = b'queued'
