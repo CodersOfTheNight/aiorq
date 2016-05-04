@@ -150,13 +150,13 @@ def test_empty_removes_jobs(redis):
 
     queue = b'default'
     id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
-    spec = {
-        b'created_at': b'2016-04-05T22:40:35Z',
-        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        b'description': b'fixtures.some_calculation(3, 4, z=2)',
-        b'timeout': 180,
-    }
-    yield from enqueue_job(redis, queue, id, spec)
+    yield from enqueue_job(redis=redis,
+                           queue=queue,
+                           id=id,
+                           data=b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+                           description=b'fixtures.some_calculation(3, 4, z=2)',
+                           timeout=180,
+                           created_at=b'2016-04-05T22:40:35Z')
     yield from empty_queue(redis, queue)
     assert not (yield from redis.exists(job_key(id)))
 
@@ -167,21 +167,21 @@ def test_empty_queue_removes_dependents(redis):
     queue = b'default'
     parent_id = b'56e6ba45-1aa3-4724-8c9f-51b7b0031cee'
     id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
-    parent_spec = {
-        b'created_at': b'2016-04-05T22:40:35Z',
-        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        b'description': b'fixtures.some_calculation(3, 4, z=2)',
-        b'timeout': 180,
-    }
-    spec = {
-        b'created_at': b'2016-04-05T22:40:35Z',
-        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        b'description': b'fixtures.some_calculation(3, 4, z=2)',
-        b'timeout': 180,
-        b'dependency_id': parent_id,
-    }
-    yield from enqueue_job(redis, queue, parent_id, parent_spec)
-    yield from enqueue_job(redis, queue, id, spec)
+    yield from enqueue_job(redis=redis,
+                           queue=queue,
+                           id=parent_id,
+                           data=b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+                           description=b'fixtures.some_calculation(3, 4, z=2)',
+                           timeout=180,
+                           created_at=b'2016-04-05T22:40:35Z')
+    yield from enqueue_job(redis=redis,
+                           queue=queue,
+                           id=id,
+                           data=b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+                           description=b'fixtures.some_calculation(3, 4, z=2)',
+                           timeout=180,
+                           created_at=b'2016-04-05T22:40:35Z',
+                           dependency_id=parent_id)
     yield from empty_queue(redis, queue)
     assert not (yield from redis.smembers(dependents(parent_id)))
 
@@ -197,15 +197,16 @@ def test_enqueue_job_store_job_hash(redis):
 
     queue = b'default'
     id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
-    spec = {
-        b'created_at': b'2016-04-05T22:40:35Z',
-        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        b'description': b'fixtures.some_calculation(3, 4, z=2)',
-        b'timeout': 180,
-    }
-    yield from enqueue_job(redis, queue, id, spec)
+    data = b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.'  # noqa
+    yield from enqueue_job(redis=redis,
+                           queue=queue,
+                           id=id,
+                           data=data,
+                           description=b'fixtures.some_calculation(3, 4, z=2)',
+                           timeout=180,
+                           created_at=b'2016-04-05T22:40:35Z')
     assert (yield from redis.type(job_key(id))) == b'hash'
-    assert spec[b'data'] == (yield from redis.hget(job_key(id), b'data'))
+    assert data == (yield from redis.hget(job_key(id), b'data'))
 
 
 def test_enqueue_job_register_queue(redis):
@@ -213,13 +214,13 @@ def test_enqueue_job_register_queue(redis):
 
     queue = b'default'
     id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
-    spec = {
-        b'created_at': b'2016-04-05T22:40:35Z',
-        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        b'description': b'fixtures.some_calculation(3, 4, z=2)',
-        b'timeout': 180,
-    }
-    yield from enqueue_job(redis, queue, id, spec)
+    yield from enqueue_job(redis=redis,
+                           queue=queue,
+                           id=id,
+                           data=b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+                           description=b'fixtures.some_calculation(3, 4, z=2)',
+                           timeout=180,
+                           created_at=b'2016-04-05T22:40:35Z')
     assert (yield from queues(redis)) == [b'default']
 
 
@@ -228,13 +229,13 @@ def test_enqueue_job_add_job_key_to_the_queue(redis):
 
     queue = b'default'
     id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
-    spec = {
-        b'created_at': b'2016-04-05T22:40:35Z',
-        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        b'description': b'fixtures.some_calculation(3, 4, z=2)',
-        b'timeout': 180,
-    }
-    yield from enqueue_job(redis, queue, id, spec)
+    yield from enqueue_job(redis=redis,
+                           queue=queue,
+                           id=id,
+                           data=b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+                           description=b'fixtures.some_calculation(3, 4, z=2)',
+                           timeout=180,
+                           created_at=b'2016-04-05T22:40:35Z')
     queue_content = [b'2a5079e7-387b-492f-a81c-68aa55c194c8']
     assert (yield from redis.lrange(queue_key(queue), 0, -1)) == queue_content
 
@@ -244,14 +245,15 @@ def test_enqueue_job_at_front(redis):
 
     queue = b'default'
     id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
-    spec = {
-        b'created_at': b'2016-04-05T22:40:35Z',
-        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        b'description': b'fixtures.some_calculation(3, 4, z=2)',
-        b'timeout': 180,
-    }
     yield from redis.lpush(queue_key(queue), b'xxx')
-    yield from enqueue_job(redis, queue, id, spec, at_front=True)
+    yield from enqueue_job(redis=redis,
+                           queue=queue,
+                           id=id,
+                           data=b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+                           description=b'fixtures.some_calculation(3, 4, z=2)',
+                           timeout=180,
+                           created_at=b'2016-04-05T22:40:35Z',
+                           at_front=True)
     queue_content = [b'2a5079e7-387b-492f-a81c-68aa55c194c8', b'xxx']
     assert (yield from redis.lrange(queue_key(queue), 0, -1)) == queue_content
 
@@ -261,13 +263,13 @@ def test_enqueue_job_set_job_status(redis):
 
     queue = b'default'
     id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
-    spec = {
-        b'created_at': b'2016-04-05T22:40:35Z',
-        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        b'description': b'fixtures.some_calculation(3, 4, z=2)',
-        b'timeout': 180,
-    }
-    yield from enqueue_job(redis, queue, id, spec)
+    yield from enqueue_job(redis=redis,
+                           queue=queue,
+                           id=id,
+                           data=b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+                           description=b'fixtures.some_calculation(3, 4, z=2)',
+                           timeout=180,
+                           created_at=b'2016-04-05T22:40:35Z')
     assert (yield from job_status(redis, id)) == JobStatus.QUEUED
 
 
@@ -276,13 +278,13 @@ def test_enqueue_job_set_job_origin(redis):
 
     queue = b'default'
     id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
-    spec = {
-        b'created_at': b'2016-04-05T22:40:35Z',
-        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        b'description': b'fixtures.some_calculation(3, 4, z=2)',
-        b'timeout': 180,
-    }
-    yield from enqueue_job(redis, queue, id, spec)
+    yield from enqueue_job(redis=redis,
+                           queue=queue,
+                           id=id,
+                           data=b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+                           description=b'fixtures.some_calculation(3, 4, z=2)',
+                           timeout=180,
+                           created_at=b'2016-04-05T22:40:35Z')
     assert (yield from redis.hget(job_key(id), b'origin')) == b'default'
 
 
@@ -291,13 +293,13 @@ def test_enqueue_job_set_job_enqueued_at(redis):
 
     queue = b'default'
     id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
-    spec = {
-        b'created_at': b'2016-04-05T22:40:35Z',
-        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        b'description': b'fixtures.some_calculation(3, 4, z=2)',
-        b'timeout': 180,
-    }
-    yield from enqueue_job(redis, queue, id, spec)
+    yield from enqueue_job(redis=redis,
+                           queue=queue,
+                           id=id,
+                           data=b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+                           description=b'fixtures.some_calculation(3, 4, z=2)',
+                           timeout=180,
+                           created_at=b'2016-04-05T22:40:35Z')
     utcparse((yield from redis.hget(job_key(id), b'enqueued_at')))
 
 
@@ -307,21 +309,21 @@ def test_enqueue_job_dependent_status(redis):
     queue = b'default'
     parent_id = b'56e6ba45-1aa3-4724-8c9f-51b7b0031cee'
     id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
-    parent_spec = {
-        b'created_at': b'2016-04-05T22:40:35Z',
-        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        b'description': b'fixtures.some_calculation(3, 4, z=2)',
-        b'timeout': 180,
-    }
-    spec = {
-        b'created_at': b'2016-04-05T22:40:35Z',
-        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        b'description': b'fixtures.some_calculation(3, 4, z=2)',
-        b'timeout': 180,
-        b'dependency_id': parent_id,
-    }
-    yield from enqueue_job(redis, queue, parent_id, parent_spec)
-    yield from enqueue_job(redis, queue, id, spec)
+    yield from enqueue_job(redis=redis,
+                           queue=queue,
+                           id=parent_id,
+                           data=b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+                           description=b'fixtures.some_calculation(3, 4, z=2)',
+                           timeout=180,
+                           created_at=b'2016-04-05T22:40:35Z')
+    yield from enqueue_job(redis=redis,
+                           queue=queue,
+                           id=id,
+                           data=b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+                           description=b'fixtures.some_calculation(3, 4, z=2)',
+                           timeout=180,
+                           created_at=b'2016-04-05T22:40:35Z',
+                           dependency_id=parent_id)
     assert (yield from job_status(redis, id)) == JobStatus.DEFERRED
 
 
@@ -331,21 +333,21 @@ def test_enqueue_job_defer_dependent(redis):
     queue = b'default'
     parent_id = b'56e6ba45-1aa3-4724-8c9f-51b7b0031cee'
     id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
-    parent_spec = {
-        b'created_at': b'2016-04-05T22:40:35Z',
-        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        b'description': b'fixtures.some_calculation(3, 4, z=2)',
-        b'timeout': 180,
-    }
-    spec = {
-        b'created_at': b'2016-04-05T22:40:35Z',
-        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        b'description': b'fixtures.some_calculation(3, 4, z=2)',
-        b'timeout': 180,
-        b'dependency_id': parent_id,
-    }
-    yield from enqueue_job(redis, queue, parent_id, parent_spec)
-    yield from enqueue_job(redis, queue, id, spec)
+    yield from enqueue_job(redis=redis,
+                           queue=queue,
+                           id=parent_id,
+                           data=b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+                           description=b'fixtures.some_calculation(3, 4, z=2)',
+                           timeout=180,
+                           created_at=b'2016-04-05T22:40:35Z')
+    yield from enqueue_job(redis=redis,
+                           queue=queue,
+                           id=id,
+                           data=b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+                           description=b'fixtures.some_calculation(3, 4, z=2)',
+                           timeout=180,
+                           created_at=b'2016-04-05T22:40:35Z',
+                           dependency_id=parent_id)
     assert (yield from redis.lrange(queue_key(queue), 0, -1)) == [parent_id]
 
 
@@ -355,24 +357,24 @@ def test_enqueue_job_finished_dependency(redis):
     queue = b'default'
     parent_id = b'56e6ba45-1aa3-4724-8c9f-51b7b0031cee'
     id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
-    parent_spec = {
-        b'created_at': b'2016-04-05T22:40:35Z',
-        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        b'description': b'fixtures.some_calculation(3, 4, z=2)',
-        b'timeout': 180,
-    }
-    spec = {
-        b'created_at': b'2016-04-05T22:40:35Z',
-        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        b'description': b'fixtures.some_calculation(3, 4, z=2)',
-        b'timeout': 180,
-        b'dependency_id': parent_id,
-    }
-    yield from enqueue_job(redis, queue, parent_id, parent_spec)
+    yield from enqueue_job(redis=redis,
+                           queue=queue,
+                           id=parent_id,
+                           data=b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+                           description=b'fixtures.some_calculation(3, 4, z=2)',
+                           timeout=180,
+                           created_at=b'2016-04-05T22:40:35Z')
     stored_id, stored_spec = yield from dequeue_job(redis, queue)
     yield from start_job(redis, queue, parent_id, stored_spec)
     yield from finish_job(redis, parent_id, stored_spec)
-    yield from enqueue_job(redis, queue, id, spec)
+    yield from enqueue_job(redis=redis,
+                           queue=queue,
+                           id=id,
+                           data=b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+                           description=b'fixtures.some_calculation(3, 4, z=2)',
+                           timeout=180,
+                           created_at=b'2016-04-05T22:40:35Z',
+                           dependency_id=parent_id)
     assert (yield from redis.lrange(queue_key(queue), 0, -1)) == [id]
 
 
@@ -382,21 +384,21 @@ def test_enqueue_job_deferred_job_registry(redis):
     queue = b'default'
     parent_id = b'56e6ba45-1aa3-4724-8c9f-51b7b0031cee'
     id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
-    parent_spec = {
-        b'created_at': b'2016-04-05T22:40:35Z',
-        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        b'description': b'fixtures.some_calculation(3, 4, z=2)',
-        b'timeout': 180,
-    }
-    spec = {
-        b'created_at': b'2016-04-05T22:40:35Z',
-        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        b'description': b'fixtures.some_calculation(3, 4, z=2)',
-        b'timeout': 180,
-        b'dependency_id': parent_id,
-    }
-    yield from enqueue_job(redis, queue, parent_id, parent_spec)
-    yield from enqueue_job(redis, queue, id, spec)
+    yield from enqueue_job(redis=redis,
+                           queue=queue,
+                           id=parent_id,
+                           data=b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+                           description=b'fixtures.some_calculation(3, 4, z=2)',
+                           timeout=180,
+                           created_at=b'2016-04-05T22:40:35Z')
+    yield from enqueue_job(redis=redis,
+                           queue=queue,
+                           id=id,
+                           data=b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+                           description=b'fixtures.some_calculation(3, 4, z=2)',
+                           timeout=180,
+                           created_at=b'2016-04-05T22:40:35Z',
+                           dependency_id=parent_id)
     assert (yield from deferred_jobs(redis, queue)) == [id]
 
 
@@ -406,21 +408,21 @@ def test_enqueue_job_dependents_set(redis):
     queue = b'default'
     parent_id = b'56e6ba45-1aa3-4724-8c9f-51b7b0031cee'
     id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
-    parent_spec = {
-        b'created_at': b'2016-04-05T22:40:35Z',
-        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        b'description': b'fixtures.some_calculation(3, 4, z=2)',
-        b'timeout': 180,
-    }
-    spec = {
-        b'created_at': b'2016-04-05T22:40:35Z',
-        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        b'description': b'fixtures.some_calculation(3, 4, z=2)',
-        b'timeout': 180,
-        b'dependency_id': parent_id,
-    }
-    yield from enqueue_job(redis, queue, parent_id, parent_spec)
-    yield from enqueue_job(redis, queue, id, spec)
+    yield from enqueue_job(redis=redis,
+                           queue=queue,
+                           id=parent_id,
+                           data=b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+                           description=b'fixtures.some_calculation(3, 4, z=2)',
+                           timeout=180,
+                           created_at=b'2016-04-05T22:40:35Z')
+    yield from enqueue_job(redis=redis,
+                           queue=queue,
+                           id=id,
+                           data=b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+                           description=b'fixtures.some_calculation(3, 4, z=2)',
+                           timeout=180,
+                           created_at=b'2016-04-05T22:40:35Z',
+                           dependency_id=parent_id)
     assert (yield from redis.smembers(dependents(parent_id))) == [id]
 
 
@@ -430,21 +432,21 @@ def test_enqueue_job_defer_without_date(redis):
     queue = b'default'
     parent_id = b'56e6ba45-1aa3-4724-8c9f-51b7b0031cee'
     id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
-    parent_spec = {
-        b'created_at': b'2016-04-05T22:40:35Z',
-        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        b'description': b'fixtures.some_calculation(3, 4, z=2)',
-        b'timeout': 180,
-    }
-    spec = {
-        b'created_at': b'2016-04-05T22:40:35Z',
-        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        b'description': b'fixtures.some_calculation(3, 4, z=2)',
-        b'timeout': 180,
-        b'dependency_id': parent_id,
-    }
-    yield from enqueue_job(redis, queue, parent_id, parent_spec)
-    yield from enqueue_job(redis, queue, id, spec)
+    yield from enqueue_job(redis=redis,
+                           queue=queue,
+                           id=parent_id,
+                           data=b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+                           description=b'fixtures.some_calculation(3, 4, z=2)',
+                           timeout=180,
+                           created_at=b'2016-04-05T22:40:35Z')
+    yield from enqueue_job(redis=redis,
+                           queue=queue,
+                           id=id,
+                           data=b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+                           description=b'fixtures.some_calculation(3, 4, z=2)',
+                           timeout=180,
+                           created_at=b'2016-04-05T22:40:35Z',
+                           dependency_id=parent_id)
     assert not (yield from redis.hexists(job_key(id), b'enqueued_at'))
 
 
@@ -468,14 +470,14 @@ def test_dequeue_job(redis):
 
     queue = b'default'
     id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
-    spec = {
-        b'created_at': b'2016-04-05T22:40:35Z',
-        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        b'description': b'fixtures.some_calculation(3, 4, z=2)',
-        b'timeout': 180,
-        b'result_ttl': 5000,
-    }
-    yield from enqueue_job(redis, queue, id, spec)
+    yield from enqueue_job(redis=redis,
+                           queue=queue,
+                           id=id,
+                           data=b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+                           description=b'fixtures.some_calculation(3, 4, z=2)',
+                           timeout=180,
+                           created_at=b'2016-04-05T22:40:35Z',
+                           result_ttl=5000)
     stored_id, stored_spec = yield from dequeue_job(redis, queue)
     assert not (yield from queue_length(redis, queue))
     assert stored_id == id
@@ -497,13 +499,13 @@ def test_dequeue_job_no_such_job(redis):
     queue = b'default'
     yield from redis.rpush(queue_key(queue), b'foo')  # Job id without hash.
     id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
-    spec = {
-        b'created_at': b'2016-04-05T22:40:35Z',
-        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        b'description': b'fixtures.some_calculation(3, 4, z=2)',
-        b'timeout': 180,
-    }
-    yield from enqueue_job(redis, queue, id, spec)
+    yield from enqueue_job(redis=redis,
+                           queue=queue,
+                           id=id,
+                           data=b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+                           description=b'fixtures.some_calculation(3, 4, z=2)',
+                           timeout=180,
+                           created_at=b'2016-04-05T22:40:35Z')
     stored_id, stored_spec = yield from dequeue_job(redis, queue)
     assert stored_id == id
 
@@ -516,13 +518,13 @@ def test_cancel_job(redis):
 
     queue = b'default'
     id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
-    spec = {
-        b'created_at': b'2016-04-05T22:40:35Z',
-        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        b'description': b'fixtures.some_calculation(3, 4, z=2)',
-        b'timeout': 180,
-    }
-    yield from enqueue_job(redis, queue, id, spec)
+    yield from enqueue_job(redis=redis,
+                           queue=queue,
+                           id=id,
+                           data=b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+                           description=b'fixtures.some_calculation(3, 4, z=2)',
+                           timeout=180,
+                           created_at=b'2016-04-05T22:40:35Z')
     yield from cancel_job(redis, queue, id)
     assert not (yield from queue_length(redis, queue))
 
@@ -535,13 +537,13 @@ def test_start_job_sets_job_status(redis):
 
     queue = b'default'
     id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
-    spec = {
-        b'created_at': b'2016-04-05T22:40:35Z',
-        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        b'description': b'fixtures.some_calculation(3, 4, z=2)',
-        b'timeout': 180,
-    }
-    yield from enqueue_job(redis, queue, id, spec)
+    yield from enqueue_job(redis=redis,
+                           queue=queue,
+                           id=id,
+                           data=b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+                           description=b'fixtures.some_calculation(3, 4, z=2)',
+                           timeout=180,
+                           created_at=b'2016-04-05T22:40:35Z')
     stored_id, stored_spec = yield from dequeue_job(redis, queue)
     yield from start_job(redis, queue, id, stored_spec)
     assert (yield from job_status(redis, id)) == JobStatus.STARTED
@@ -552,13 +554,13 @@ def test_start_job_sets_started_time(redis):
 
     queue = b'default'
     id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
-    spec = {
-        b'created_at': b'2016-04-05T22:40:35Z',
-        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        b'description': b'fixtures.some_calculation(3, 4, z=2)',
-        b'timeout': 180,
-    }
-    yield from enqueue_job(redis, queue, id, spec)
+    yield from enqueue_job(redis=redis,
+                           queue=queue,
+                           id=id,
+                           data=b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+                           description=b'fixtures.some_calculation(3, 4, z=2)',
+                           timeout=180,
+                           created_at=b'2016-04-05T22:40:35Z')
     stored_id, stored_spec = yield from dequeue_job(redis, queue)
     yield from start_job(redis, queue, id, stored_spec)
     started_at = yield from redis.hget(job_key(id), b'started_at')
@@ -570,13 +572,13 @@ def test_start_job_add_job_to_registry(redis):
 
     queue = b'default'
     id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
-    spec = {
-        b'created_at': b'2016-04-05T22:40:35Z',
-        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        b'description': b'fixtures.some_calculation(3, 4, z=2)',
-        b'timeout': 180,
-    }
-    yield from enqueue_job(redis, queue, id, spec)
+    yield from enqueue_job(redis=redis,
+                           queue=queue,
+                           id=id,
+                           data=b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+                           description=b'fixtures.some_calculation(3, 4, z=2)',
+                           timeout=180,
+                           created_at=b'2016-04-05T22:40:35Z')
     stored_id, stored_spec = yield from dequeue_job(redis, queue)
     yield from start_job(redis, queue, id, stored_spec)
     score = current_timestamp() + stored_spec[b'timeout'] + 60
@@ -589,13 +591,13 @@ def test_start_job_persist_job(redis):
 
     queue = b'default'
     id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
-    spec = {
-        b'created_at': b'2016-04-05T22:40:35Z',
-        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        b'description': b'fixtures.some_calculation(3, 4, z=2)',
-        b'timeout': 180,
-    }
-    yield from enqueue_job(redis, queue, id, spec)
+    yield from enqueue_job(redis=redis,
+                           queue=queue,
+                           id=id,
+                           data=b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+                           description=b'fixtures.some_calculation(3, 4, z=2)',
+                           timeout=180,
+                           created_at=b'2016-04-05T22:40:35Z')
     yield from redis.expire(job_key(id), 3)
     stored_id, stored_spec = yield from dequeue_job(redis, queue)
     yield from start_job(redis, queue, id, stored_spec)
@@ -610,13 +612,13 @@ def test_finish_job_sets_ended_at(redis):
 
     queue = b'default'
     id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
-    spec = {
-        b'created_at': b'2016-04-05T22:40:35Z',
-        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        b'description': b'fixtures.some_calculation(3, 4, z=2)',
-        b'timeout': 180,
-    }
-    yield from enqueue_job(redis, queue, id, spec)
+    yield from enqueue_job(redis=redis,
+                           queue=queue,
+                           id=id,
+                           data=b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+                           description=b'fixtures.some_calculation(3, 4, z=2)',
+                           timeout=180,
+                           created_at=b'2016-04-05T22:40:35Z')
     stored_id, stored_spec = yield from dequeue_job(redis, queue)
     yield from start_job(redis, queue, id, stored_spec)
     yield from finish_job(redis, id, stored_spec)
@@ -629,13 +631,13 @@ def test_finish_job_sets_corresponding_status(redis):
 
     queue = b'default'
     id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
-    spec = {
-        b'created_at': b'2016-04-05T22:40:35Z',
-        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        b'description': b'fixtures.some_calculation(3, 4, z=2)',
-        b'timeout': 180,
-    }
-    yield from enqueue_job(redis, queue, id, spec)
+    yield from enqueue_job(redis=redis,
+                           queue=queue,
+                           id=id,
+                           data=b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+                           description=b'fixtures.some_calculation(3, 4, z=2)',
+                           timeout=180,
+                           created_at=b'2016-04-05T22:40:35Z')
     stored_id, stored_spec = yield from dequeue_job(redis, queue)
     yield from start_job(redis, queue, id, stored_spec)
     yield from finish_job(redis, id, stored_spec)
@@ -647,13 +649,13 @@ def test_finish_job_sets_results_ttl(redis):
 
     queue = b'default'
     id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
-    spec = {
-        b'created_at': b'2016-04-05T22:40:35Z',
-        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        b'description': b'fixtures.some_calculation(3, 4, z=2)',
-        b'timeout': 180,
-    }
-    yield from enqueue_job(redis, queue, id, spec)
+    yield from enqueue_job(redis=redis,
+                           queue=queue,
+                           id=id,
+                           data=b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+                           description=b'fixtures.some_calculation(3, 4, z=2)',
+                           timeout=180,
+                           created_at=b'2016-04-05T22:40:35Z')
     stored_id, stored_spec = yield from dequeue_job(redis, queue)
     yield from start_job(redis, queue, id, stored_spec)
     yield from finish_job(redis, id, stored_spec)
@@ -665,14 +667,14 @@ def test_finish_job_use_custom_ttl(redis):
 
     queue = b'default'
     id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
-    spec = {
-        b'created_at': b'2016-04-05T22:40:35Z',
-        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        b'description': b'fixtures.some_calculation(3, 4, z=2)',
-        b'timeout': 180,
-        b'result_ttl': 5000,
-    }
-    yield from enqueue_job(redis, queue, id, spec)
+    yield from enqueue_job(redis=redis,
+                           queue=queue,
+                           id=id,
+                           data=b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+                           description=b'fixtures.some_calculation(3, 4, z=2)',
+                           timeout=180,
+                           created_at=b'2016-04-05T22:40:35Z',
+                           result_ttl=5000)
     stored_id, stored_spec = yield from dequeue_job(redis, queue)
     yield from start_job(redis, queue, id, stored_spec)
     yield from finish_job(redis, id, stored_spec)
@@ -684,14 +686,14 @@ def test_finish_job_remove_results_zero_ttl(redis):
 
     queue = b'default'
     id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
-    spec = {
-        b'created_at': b'2016-04-05T22:40:35Z',
-        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        b'description': b'fixtures.some_calculation(3, 4, z=2)',
-        b'timeout': 180,
-        b'result_ttl': 0,
-    }
-    yield from enqueue_job(redis, queue, id, spec)
+    yield from enqueue_job(redis=redis,
+                           queue=queue,
+                           id=id,
+                           data=b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+                           description=b'fixtures.some_calculation(3, 4, z=2)',
+                           timeout=180,
+                           created_at=b'2016-04-05T22:40:35Z',
+                           result_ttl=0)
     stored_id, stored_spec = yield from dequeue_job(redis, queue)
     yield from start_job(redis, queue, id, stored_spec)
     yield from finish_job(redis, id, stored_spec)
@@ -703,14 +705,14 @@ def test_finish_job_non_expired_job(redis):
 
     queue = b'default'
     id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
-    spec = {
-        b'created_at': b'2016-04-05T22:40:35Z',
-        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        b'description': b'fixtures.some_calculation(3, 4, z=2)',
-        b'timeout': 180,
-        b'result_ttl': None,
-    }
-    yield from enqueue_job(redis, queue, id, spec)
+    yield from enqueue_job(redis=redis,
+                           queue=queue,
+                           id=id,
+                           data=b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+                           description=b'fixtures.some_calculation(3, 4, z=2)',
+                           timeout=180,
+                           created_at=b'2016-04-05T22:40:35Z',
+                           result_ttl=None)
     stored_id, stored_spec = yield from dequeue_job(redis, queue)
     yield from start_job(redis, queue, id, stored_spec)
     yield from finish_job(redis, id, stored_spec)
@@ -722,13 +724,13 @@ def test_finish_job_started_registry(redis):
 
     queue = b'default'
     id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
-    spec = {
-        b'created_at': b'2016-04-05T22:40:35Z',
-        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        b'description': b'fixtures.some_calculation(3, 4, z=2)',
-        b'timeout': 180,
-    }
-    yield from enqueue_job(redis, queue, id, spec)
+    yield from enqueue_job(redis=redis,
+                           queue=queue,
+                           id=id,
+                           data=b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+                           description=b'fixtures.some_calculation(3, 4, z=2)',
+                           timeout=180,
+                           created_at=b'2016-04-05T22:40:35Z')
     stored_id, stored_spec = yield from dequeue_job(redis, queue)
     yield from start_job(redis, queue, id, stored_spec)
     yield from finish_job(redis, id, stored_spec)
@@ -740,13 +742,13 @@ def test_finish_job_finished_registry(redis):
 
     queue = b'default'
     id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
-    spec = {
-        b'created_at': b'2016-04-05T22:40:35Z',
-        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        b'description': b'fixtures.some_calculation(3, 4, z=2)',
-        b'timeout': 180,
-    }
-    yield from enqueue_job(redis, queue, id, spec)
+    yield from enqueue_job(redis=redis,
+                           queue=queue,
+                           id=id,
+                           data=b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+                           description=b'fixtures.some_calculation(3, 4, z=2)',
+                           timeout=180,
+                           created_at=b'2016-04-05T22:40:35Z')
     stored_id, stored_spec = yield from dequeue_job(redis, queue)
     yield from start_job(redis, queue, id, stored_spec)
     yield from finish_job(redis, id, stored_spec)
@@ -759,14 +761,14 @@ def test_finish_job_finished_registry_negative_ttl(redis):
 
     queue = b'default'
     id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
-    spec = {
-        b'created_at': b'2016-04-05T22:40:35Z',
-        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        b'description': b'fixtures.some_calculation(3, 4, z=2)',
-        b'timeout': 180,
-        b'result_ttl': None,
-    }
-    yield from enqueue_job(redis, queue, id, spec)
+    yield from enqueue_job(redis=redis,
+                           queue=queue,
+                           id=id,
+                           data=b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+                           description=b'fixtures.some_calculation(3, 4, z=2)',
+                           timeout=180,
+                           created_at=b'2016-04-05T22:40:35Z',
+                           result_ttl=None)
     stored_id, stored_spec = yield from dequeue_job(redis, queue)
     yield from start_job(redis, queue, id, stored_spec)
     yield from finish_job(redis, id, stored_spec)
@@ -780,21 +782,21 @@ def test_finish_job_enqueue_dependents(redis):
     queue = b'default'
     parent_id = b'56e6ba45-1aa3-4724-8c9f-51b7b0031cee'
     id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
-    parent_spec = {
-        b'created_at': b'2016-04-05T22:40:35Z',
-        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        b'description': b'fixtures.some_calculation(3, 4, z=2)',
-        b'timeout': 180,
-    }
-    spec = {
-        b'created_at': b'2016-04-05T22:40:35Z',
-        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        b'description': b'fixtures.some_calculation(3, 4, z=2)',
-        b'timeout': 180,
-        b'dependency_id': parent_id,
-    }
-    yield from enqueue_job(redis, queue, parent_id, parent_spec)
-    yield from enqueue_job(redis, queue, id, spec)
+    yield from enqueue_job(redis=redis,
+                           queue=queue,
+                           id=parent_id,
+                           data=b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+                           description=b'fixtures.some_calculation(3, 4, z=2)',
+                           timeout=180,
+                           created_at=b'2016-04-05T22:40:35Z')
+    yield from enqueue_job(redis=redis,
+                           queue=queue,
+                           id=id,
+                           data=b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+                           description=b'fixtures.some_calculation(3, 4, z=2)',
+                           timeout=180,
+                           created_at=b'2016-04-05T22:40:35Z',
+                           dependency_id=parent_id)
     stored_id, stored_spec = yield from dequeue_job(redis, queue)
     yield from start_job(redis, queue, stored_id, stored_spec)
     yield from finish_job(redis, stored_id, stored_spec)
@@ -807,21 +809,21 @@ def test_finish_job_enqueue_dependents_status(redis):
     queue = b'default'
     parent_id = b'56e6ba45-1aa3-4724-8c9f-51b7b0031cee'
     id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
-    parent_spec = {
-        b'created_at': b'2016-04-05T22:40:35Z',
-        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        b'description': b'fixtures.some_calculation(3, 4, z=2)',
-        b'timeout': 180,
-    }
-    spec = {
-        b'created_at': b'2016-04-05T22:40:35Z',
-        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        b'description': b'fixtures.some_calculation(3, 4, z=2)',
-        b'timeout': 180,
-        b'dependency_id': parent_id,
-    }
-    yield from enqueue_job(redis, queue, parent_id, parent_spec)
-    yield from enqueue_job(redis, queue, id, spec)
+    yield from enqueue_job(redis=redis,
+                           queue=queue,
+                           id=parent_id,
+                           data=b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+                           description=b'fixtures.some_calculation(3, 4, z=2)',
+                           timeout=180,
+                           created_at=b'2016-04-05T22:40:35Z')
+    yield from enqueue_job(redis=redis,
+                           queue=queue,
+                           id=id,
+                           data=b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+                           description=b'fixtures.some_calculation(3, 4, z=2)',
+                           timeout=180,
+                           created_at=b'2016-04-05T22:40:35Z',
+                           dependency_id=parent_id)
     stored_id, stored_spec = yield from dequeue_job(redis, queue)
     yield from start_job(redis, queue, stored_id, stored_spec)
     yield from finish_job(redis, stored_id, stored_spec)
@@ -834,21 +836,21 @@ def test_finish_job_dependents_enqueue_date(redis):
     queue = b'default'
     parent_id = b'56e6ba45-1aa3-4724-8c9f-51b7b0031cee'
     id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
-    parent_spec = {
-        b'created_at': b'2016-04-05T22:40:35Z',
-        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        b'description': b'fixtures.some_calculation(3, 4, z=2)',
-        b'timeout': 180,
-    }
-    spec = {
-        b'created_at': b'2016-04-05T22:40:35Z',
-        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        b'description': b'fixtures.some_calculation(3, 4, z=2)',
-        b'timeout': 180,
-        b'dependency_id': parent_id,
-    }
-    yield from enqueue_job(redis, queue, parent_id, parent_spec)
-    yield from enqueue_job(redis, queue, id, spec)
+    yield from enqueue_job(redis=redis,
+                           queue=queue,
+                           id=parent_id,
+                           data=b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+                           description=b'fixtures.some_calculation(3, 4, z=2)',
+                           timeout=180,
+                           created_at=b'2016-04-05T22:40:35Z')
+    yield from enqueue_job(redis=redis,
+                           queue=queue,
+                           id=id,
+                           data=b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+                           description=b'fixtures.some_calculation(3, 4, z=2)',
+                           timeout=180,
+                           created_at=b'2016-04-05T22:40:35Z',
+                           dependency_id=parent_id)
     stored_id, stored_spec = yield from dequeue_job(redis, queue)
     yield from start_job(redis, queue, stored_id, stored_spec)
     yield from finish_job(redis, stored_id, stored_spec)
@@ -862,21 +864,21 @@ def test_finish_job_cleanup_dependents(redis):
     queue = b'default'
     parent_id = b'56e6ba45-1aa3-4724-8c9f-51b7b0031cee'
     id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
-    parent_spec = {
-        b'created_at': b'2016-04-05T22:40:35Z',
-        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        b'description': b'fixtures.some_calculation(3, 4, z=2)',
-        b'timeout': 180,
-    }
-    spec = {
-        b'created_at': b'2016-04-05T22:40:35Z',
-        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        b'description': b'fixtures.some_calculation(3, 4, z=2)',
-        b'timeout': 180,
-        b'dependency_id': parent_id,
-    }
-    yield from enqueue_job(redis, queue, parent_id, parent_spec)
-    yield from enqueue_job(redis, queue, id, spec)
+    yield from enqueue_job(redis=redis,
+                           queue=queue,
+                           id=parent_id,
+                           data=b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+                           description=b'fixtures.some_calculation(3, 4, z=2)',
+                           timeout=180,
+                           created_at=b'2016-04-05T22:40:35Z')
+    yield from enqueue_job(redis=redis,
+                           queue=queue,
+                           id=id,
+                           data=b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+                           description=b'fixtures.some_calculation(3, 4, z=2)',
+                           timeout=180,
+                           created_at=b'2016-04-05T22:40:35Z',
+                           dependency_id=parent_id)
     stored_id, stored_spec = yield from dequeue_job(redis, queue)
     yield from start_job(redis, queue, stored_id, stored_spec)
     yield from finish_job(redis, stored_id, stored_spec)
@@ -889,21 +891,21 @@ def test_finish_job_dependents_defered_registry(redis):
     queue = b'default'
     parent_id = b'56e6ba45-1aa3-4724-8c9f-51b7b0031cee'
     id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
-    parent_spec = {
-        b'created_at': b'2016-04-05T22:40:35Z',
-        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        b'description': b'fixtures.some_calculation(3, 4, z=2)',
-        b'timeout': 180,
-    }
-    spec = {
-        b'created_at': b'2016-04-05T22:40:35Z',
-        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        b'description': b'fixtures.some_calculation(3, 4, z=2)',
-        b'timeout': 180,
-        b'dependency_id': parent_id,
-    }
-    yield from enqueue_job(redis, queue, parent_id, parent_spec)
-    yield from enqueue_job(redis, queue, id, spec)
+    yield from enqueue_job(redis=redis,
+                           queue=queue,
+                           id=parent_id,
+                           data=b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+                           description=b'fixtures.some_calculation(3, 4, z=2)',
+                           timeout=180,
+                           created_at=b'2016-04-05T22:40:35Z')
+    yield from enqueue_job(redis=redis,
+                           queue=queue,
+                           id=id,
+                           data=b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+                           description=b'fixtures.some_calculation(3, 4, z=2)',
+                           timeout=180,
+                           created_at=b'2016-04-05T22:40:35Z',
+                           dependency_id=parent_id)
     stored_id, stored_spec = yield from dequeue_job(redis, queue)
     yield from start_job(redis, queue, stored_id, stored_spec)
     yield from finish_job(redis, stored_id, stored_spec)
@@ -936,13 +938,13 @@ def test_fail_job_set_status(redis):
 
     queue = b'default'
     id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
-    spec = {
-        b'created_at': b'2016-04-05T22:40:35Z',
-        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        b'description': b'fixtures.some_calculation(3, 4, z=2)',
-        b'timeout': 180,
-    }
-    yield from enqueue_job(redis, queue, id, spec)
+    yield from enqueue_job(redis=redis,
+                           queue=queue,
+                           id=id,
+                           data=b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+                           description=b'fixtures.some_calculation(3, 4, z=2)',
+                           timeout=180,
+                           created_at=b'2016-04-05T22:40:35Z')
     yield from fail_job(redis, queue, id, b"Exception('We are here')")
     assert (yield from job_status(redis, id)) == JobStatus.FAILED
 
@@ -972,13 +974,13 @@ def test_fail_job_removes_from_started_registry(redis):
 
     queue = b'default'
     id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
-    spec = {
-        b'created_at': b'2016-04-05T22:40:35Z',
-        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        b'description': b'fixtures.some_calculation(3, 4, z=2)',
-        b'timeout': 180,
-    }
-    yield from enqueue_job(redis, queue, id, spec)
+    yield from enqueue_job(redis=redis,
+                           queue=queue,
+                           id=id,
+                           data=b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+                           description=b'fixtures.some_calculation(3, 4, z=2)',
+                           timeout=180,
+                           created_at=b'2016-04-05T22:40:35Z')
     stored_id, stored_spec = yield from dequeue_job(redis, queue)
     yield from start_job(redis, queue, id, stored_spec)
     yield from fail_job(redis, queue, id, b"Exception('We are here')")
@@ -993,13 +995,13 @@ def test_requeue_job_set_status(redis):
 
     queue = b'default'
     id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
-    spec = {
-        b'created_at': b'2016-04-05T22:40:35Z',
-        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        b'description': b'fixtures.some_calculation(3, 4, z=2)',
-        b'timeout': 180,
-    }
-    yield from enqueue_job(redis, queue, id, spec)
+    yield from enqueue_job(redis=redis,
+                           queue=queue,
+                           id=id,
+                           data=b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+                           description=b'fixtures.some_calculation(3, 4, z=2)',
+                           timeout=180,
+                           created_at=b'2016-04-05T22:40:35Z')
     yield from dequeue_job(redis, queue)
     yield from fail_job(redis, queue, id, b"Exception('We are here')")
     yield from requeue_job(redis, id)
@@ -1011,13 +1013,13 @@ def test_requeue_job_clean_exc_info(redis):
 
     queue = b'default'
     id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
-    spec = {
-        b'created_at': b'2016-04-05T22:40:35Z',
-        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        b'description': b'fixtures.some_calculation(3, 4, z=2)',
-        b'timeout': 180,
-    }
-    yield from enqueue_job(redis, queue, id, spec)
+    yield from enqueue_job(redis=redis,
+                           queue=queue,
+                           id=id,
+                           data=b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+                           description=b'fixtures.some_calculation(3, 4, z=2)',
+                           timeout=180,
+                           created_at=b'2016-04-05T22:40:35Z')
     yield from dequeue_job(redis, queue)
     yield from fail_job(redis, queue, id, b"Exception('We are here')")
     yield from requeue_job(redis, id)
@@ -1029,13 +1031,13 @@ def test_requeue_job_enqueue_into_origin(redis):
 
     queue = b'default'
     id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
-    spec = {
-        b'created_at': b'2016-04-05T22:40:35Z',
-        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        b'description': b'fixtures.some_calculation(3, 4, z=2)',
-        b'timeout': 180,
-    }
-    yield from enqueue_job(redis, queue, id, spec)
+    yield from enqueue_job(redis=redis,
+                           queue=queue,
+                           id=id,
+                           data=b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+                           description=b'fixtures.some_calculation(3, 4, z=2)',
+                           timeout=180,
+                           created_at=b'2016-04-05T22:40:35Z')
     yield from dequeue_job(redis, queue)
     yield from fail_job(redis, queue, id, b"Exception('We are here')")
     yield from requeue_job(redis, id)
@@ -1058,13 +1060,13 @@ def test_requeue_job_error_on_non_failed_job(redis):
 
     queue = b'default'
     id = b'2a5079e7-387b-492f-a81c-68aa55c194c8'
-    spec = {
-        b'created_at': b'2016-04-05T22:40:35Z',
-        b'data': b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
-        b'description': b'fixtures.some_calculation(3, 4, z=2)',
-        b'timeout': 180,
-    }
-    yield from enqueue_job(redis, queue, id, spec)
+    yield from enqueue_job(redis=redis,
+                           queue=queue,
+                           id=id,
+                           data=b'\x80\x04\x950\x00\x00\x00\x00\x00\x00\x00(\x8c\x19fixtures.some_calculation\x94NK\x03K\x04\x86\x94}\x94\x8c\x01z\x94K\x02st\x94.',  # noqa
+                           description=b'fixtures.some_calculation(3, 4, z=2)',
+                           timeout=180,
+                           created_at=b'2016-04-05T22:40:35Z')
     with pytest.raises(InvalidOperationError):
         yield from requeue_job(redis, id)
 

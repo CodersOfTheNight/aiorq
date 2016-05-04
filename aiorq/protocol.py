@@ -9,7 +9,6 @@
 """
 
 import asyncio
-import itertools
 
 from .exceptions import InvalidOperationError
 from .keys import (queues_key, queue_key, failed_queue_key, job_key,
@@ -17,6 +16,9 @@ from .keys import (queues_key, queue_key, failed_queue_key, job_key,
                    workers_key, worker_key, dependents)
 from .specs import JobStatus, WorkerStatus
 from .utils import current_timestamp, utcformat, utcnow
+
+
+unset = object()
 
 
 @asyncio.coroutine
@@ -147,40 +149,53 @@ def compact_queue(redis):
 
 
 @asyncio.coroutine
-def enqueue_job(redis, queue, id, spec, *, at_front=False):
+def enqueue_job(redis, queue, id, data, description, timeout,
+                created_at, *, result_ttl=unset, dependency_id=unset,
+                at_front=False):
     """Persists the job specification to it corresponding Redis id.
 
     :type redis: `aioredis.Redis`
     :type queue: bytes
     :type id: bytes
-    :type spec: dict
+    :type data: bytes
+    :type description: bytes
+    :type timeout: bytes
+    :type created_at: bytes
+    :type result_ttl: int or None or unset
+    :type dependency_id: bytes or unset
     :type at_front: bool
 
     """
 
-    if b'result_ttl' in spec and spec[b'result_ttl'] is None:
-        spec[b'result_ttl'] = -1
+    if result_ttl is None:
+        result_ttl = -1
     has_dependency = False
-    if b'dependency_id' in spec:
-        coroutine = job_status(redis, spec[b'dependency_id'])
-        dependency_status = yield from coroutine
+    if dependency_id is not unset:
+        dependency_status = yield from job_status(redis, dependency_id)
         if dependency_status != JobStatus.FINISHED:
             has_dependency = True
-    spec_fields = itertools.chain.from_iterable(spec.items())
-    default_fields = (b'origin', queue)
     if has_dependency:
-        job_fields = (b'status', JobStatus.DEFERRED)
+        status = JobStatus.DEFERRED
     else:
-        job_fields = (b'status', JobStatus.QUEUED,
-                      b'enqueued_at', utcformat(utcnow()))
-    fields = itertools.chain(spec_fields, default_fields, job_fields)
+        status = JobStatus.QUEUED
+    fields = (
+        b'origin', queue,
+        b'data', data,
+        b'description', description,
+        b'timeout', timeout,
+        b'created_at', created_at,
+        b'status', status)
+    if result_ttl is not unset:
+        fields += (b'result_ttl', result_ttl)
+    if not has_dependency:
+        fields += (b'enqueued_at', utcformat(utcnow()))
     multi = redis.multi_exec()
     multi.sadd(queues_key(), queue)
     multi.hmset(job_key(id), *fields)
     if has_dependency:
         score = current_timestamp()
         multi.zadd(deferred_registry(queue), score, id)
-        multi.sadd(dependents(spec[b'dependency_id']), id)
+        multi.sadd(dependents(dependency_id), id)
     else:
         if at_front:
             multi.lpush(queue_key(queue), id)
