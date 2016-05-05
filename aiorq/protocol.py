@@ -264,29 +264,27 @@ def start_job(redis, queue, id, timeout):
 
 
 @asyncio.coroutine
-def finish_job(redis, id, spec):
+def finish_job(redis, queue, id, *, result_ttl=500):
     """Finish given job.
 
     :type redis: `aioredis.Redis`
+    :type queue: bytes
     :type id: bytes
-    :type spec: dict
+    :type result_ttl: int
 
     """
 
-    if b'result_ttl' not in spec:
-        result_ttl = 500
-    elif spec[b'result_ttl'] == 0:
+    if result_ttl == 0:
         yield from redis.delete(job_key(id))
+        # TODO: enqueue dependents
         return
-    else:
-        result_ttl = spec[b'result_ttl']
     # TODO: set result
     fields = (b'status', JobStatus.FINISHED,
               b'ended_at', utcformat(utcnow()))
     score = result_ttl if result_ttl < 0 else current_timestamp() + result_ttl
     multi = redis.multi_exec()
-    multi.zrem(started_registry(spec[b'origin']), id)
-    multi.zadd(finished_registry(spec[b'origin']), score, id)
+    multi.zrem(started_registry(queue), id)
+    multi.zadd(finished_registry(queue), score, id)
     multi.hmset(job_key(id), *fields)
     if result_ttl == -1:
         multi.persist(job_key(id))

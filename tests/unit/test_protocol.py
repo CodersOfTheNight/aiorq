@@ -367,7 +367,7 @@ def test_enqueue_job_finished_dependency(redis):
     stored_id, stored_spec = yield from dequeue_job(redis, queue)
     timeout = stored_spec[b'timeout']
     yield from start_job(redis, queue, parent_id, timeout)
-    yield from finish_job(redis, parent_id, stored_spec)
+    yield from finish_job(redis, queue, parent_id)
     yield from enqueue_job(redis=redis,
                            queue=queue,
                            id=id,
@@ -627,7 +627,7 @@ def test_finish_job_sets_ended_at(redis):
     stored_id, stored_spec = yield from dequeue_job(redis, queue)
     timeout = stored_spec[b'timeout']
     yield from start_job(redis, queue, id, timeout)
-    yield from finish_job(redis, id, stored_spec)
+    yield from finish_job(redis, queue, id)
     ended_at = yield from redis.hget(job_key(id), b'ended_at')
     assert ended_at == utcformat(utcnow())
 
@@ -647,7 +647,7 @@ def test_finish_job_sets_corresponding_status(redis):
     stored_id, stored_spec = yield from dequeue_job(redis, queue)
     timeout = stored_spec[b'timeout']
     yield from start_job(redis, queue, id, timeout)
-    yield from finish_job(redis, id, stored_spec)
+    yield from finish_job(redis, queue, id)
     assert (yield from job_status(redis, id)) == JobStatus.FINISHED
 
 
@@ -666,7 +666,7 @@ def test_finish_job_sets_results_ttl(redis):
     stored_id, stored_spec = yield from dequeue_job(redis, queue)
     timeout = stored_spec[b'timeout']
     yield from start_job(redis, queue, id, timeout)
-    yield from finish_job(redis, id, stored_spec)
+    yield from finish_job(redis, queue, id)
     assert (yield from redis.ttl(job_key(id))) == 500
 
 
@@ -685,8 +685,9 @@ def test_finish_job_use_custom_ttl(redis):
                            result_ttl=5000)
     stored_id, stored_spec = yield from dequeue_job(redis, queue)
     timeout = stored_spec[b'timeout']
+    result_ttl = stored_spec[b'result_ttl']
     yield from start_job(redis, queue, id, timeout)
-    yield from finish_job(redis, id, stored_spec)
+    yield from finish_job(redis, queue, id, result_ttl=result_ttl)
     assert (yield from redis.ttl(job_key(id))) == 5000
 
 
@@ -705,8 +706,9 @@ def test_finish_job_remove_results_zero_ttl(redis):
                            result_ttl=0)
     stored_id, stored_spec = yield from dequeue_job(redis, queue)
     timeout = stored_spec[b'timeout']
+    result_ttl = stored_spec[b'result_ttl']
     yield from start_job(redis, queue, id, timeout)
-    yield from finish_job(redis, id, stored_spec)
+    yield from finish_job(redis, queue, id, result_ttl=result_ttl)
     assert not (yield from redis.exists(job_key(id)))
 
 
@@ -725,8 +727,9 @@ def test_finish_job_non_expired_job(redis):
                            result_ttl=None)
     stored_id, stored_spec = yield from dequeue_job(redis, queue)
     timeout = stored_spec[b'timeout']
+    result_ttl = stored_spec[b'result_ttl']
     yield from start_job(redis, queue, id, timeout)
-    yield from finish_job(redis, id, stored_spec)
+    yield from finish_job(redis, queue, id, result_ttl=result_ttl)
     assert (yield from redis.ttl(job_key(id))) == -1
 
 
@@ -745,7 +748,7 @@ def test_finish_job_started_registry(redis):
     stored_id, stored_spec = yield from dequeue_job(redis, queue)
     timeout = stored_spec[b'timeout']
     yield from start_job(redis, queue, id, timeout)
-    yield from finish_job(redis, id, stored_spec)
+    yield from finish_job(redis, queue, id)
     assert not (yield from started_jobs(redis, queue))
 
 
@@ -764,7 +767,7 @@ def test_finish_job_finished_registry(redis):
     stored_id, stored_spec = yield from dequeue_job(redis, queue)
     timeout = stored_spec[b'timeout']
     yield from start_job(redis, queue, id, timeout)
-    yield from finish_job(redis, id, stored_spec)
+    yield from finish_job(redis, queue, id)
     finish = yield from redis.zrange(finished_registry(queue), withscores=True)
     assert finish == [id, current_timestamp() + 500]
 
@@ -784,8 +787,9 @@ def test_finish_job_finished_registry_negative_ttl(redis):
                            result_ttl=None)
     stored_id, stored_spec = yield from dequeue_job(redis, queue)
     timeout = stored_spec[b'timeout']
+    result_ttl = stored_spec[b'result_ttl']
     yield from start_job(redis, queue, id, timeout)
-    yield from finish_job(redis, id, stored_spec)
+    yield from finish_job(redis, queue, id, result_ttl=result_ttl)
     finish = yield from redis.zrange(finished_registry(queue), withscores=True)
     assert finish == [id, -1]
 
@@ -814,7 +818,7 @@ def test_finish_job_enqueue_dependents(redis):
     stored_id, stored_spec = yield from dequeue_job(redis, queue)
     timeout = stored_spec[b'timeout']
     yield from start_job(redis, queue, stored_id, timeout)
-    yield from finish_job(redis, stored_id, stored_spec)
+    yield from finish_job(redis, queue, stored_id)
     assert (yield from redis.lrange(queue_key(queue), 0, -1)) == [id]
 
 
@@ -842,7 +846,7 @@ def test_finish_job_enqueue_dependents_status(redis):
     stored_id, stored_spec = yield from dequeue_job(redis, queue)
     timeout = stored_spec[b'timeout']
     yield from start_job(redis, queue, stored_id, timeout)
-    yield from finish_job(redis, stored_id, stored_spec)
+    yield from finish_job(redis, queue, stored_id)
     assert (yield from redis.hget(job_key(id), b'status')) == JobStatus.QUEUED
 
 
@@ -870,7 +874,7 @@ def test_finish_job_dependents_enqueue_date(redis):
     stored_id, stored_spec = yield from dequeue_job(redis, queue)
     timeout = stored_spec[b'timeout']
     yield from start_job(redis, queue, stored_id, timeout)
-    yield from finish_job(redis, stored_id, stored_spec)
+    yield from finish_job(redis, queue, stored_id)
     enqueued_at = yield from redis.hget(job_key(id), b'enqueued_at')
     assert enqueued_at == utcformat(utcnow())
 
@@ -899,7 +903,7 @@ def test_finish_job_cleanup_dependents(redis):
     stored_id, stored_spec = yield from dequeue_job(redis, queue)
     timeout = stored_spec[b'timeout']
     yield from start_job(redis, queue, stored_id, timeout)
-    yield from finish_job(redis, stored_id, stored_spec)
+    yield from finish_job(redis, queue, stored_id)
     assert not (yield from redis.smembers(dependents(parent_id)))
 
 
@@ -927,7 +931,7 @@ def test_finish_job_dependents_defered_registry(redis):
     stored_id, stored_spec = yield from dequeue_job(redis, queue)
     timeout = stored_spec[b'timeout']
     yield from start_job(redis, queue, stored_id, timeout)
-    yield from finish_job(redis, stored_id, stored_spec)
+    yield from finish_job(redis, queue, stored_id)
     assert not (yield from deferred_jobs(redis, queue))
 
 
