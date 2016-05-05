@@ -242,19 +242,19 @@ def cancel_job(redis, queue, id):
 
 
 @asyncio.coroutine
-def start_job(redis, queue, id, spec):
+def start_job(redis, queue, id, timeout):
     """Start given job.
 
     :type redis: `aioredis.Redis`
     :type queue: bytes
     :type id: bytes
-    :type spec: dict
+    :type timeout: int
 
     """
 
     fields = (b'status', JobStatus.STARTED,
               b'started_at', utcformat(utcnow()))
-    score = current_timestamp() + spec[b'timeout'] + 60
+    score = current_timestamp() + timeout + 60
     # TODO: worker heartbeat.
     multi = redis.multi_exec()
     multi.hmset(job_key(id), *fields)
