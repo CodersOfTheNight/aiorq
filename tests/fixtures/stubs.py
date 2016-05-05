@@ -1,6 +1,5 @@
 queue = b'default'
 
-
 job = {
     'queue': queue,
     'id': b'2a5079e7-387b-492f-a81c-68aa55c194c8',
@@ -9,7 +8,6 @@ job = {
     'timeout': 180,
     'created_at': b'2016-04-05T22:40:35Z',
 }
-
 
 child_job = {
     'queue': queue,
@@ -21,7 +19,10 @@ child_job = {
     'dependency_id': b'2a5079e7-387b-492f-a81c-68aa55c194c8',
 }
 
-
 job_id = job['id']
+
 job_data = job['data']
+
 child_job_id = child_job['id']
+
+job_exc_info = b"Exception('We are here')"

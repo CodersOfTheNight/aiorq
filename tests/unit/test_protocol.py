@@ -560,14 +560,14 @@ def test_finish_job_dependents_defered_registry(redis):
 def test_fail_job_registers_failed_queue(redis):
     """Register failed queue on quarantine job."""
 
-    yield from fail_job(redis, stubs.queue, stubs.job_id, b"Exception('We are here')")
+    yield from fail_job(redis, stubs.queue, stubs.job_id, stubs.job_exc_info)
     assert (yield from queues(redis)) == [failed_queue_key()]
 
 
 def test_fail_job_enqueue_into_faileld_queue(redis):
     """Failed job appears in the failed queue."""
 
-    yield from fail_job(redis, stubs.queue, stubs.job_id, b"Exception('We are here')")
+    yield from fail_job(redis, stubs.queue, stubs.job_id, stubs.job_exc_info)
     assert stubs.job_id in (yield from jobs(redis, b'failed'))
 
 
@@ -575,14 +575,14 @@ def test_fail_job_set_status(redis):
     """Failed job should have corresponding status."""
 
     yield from enqueue_job(redis=redis, **stubs.job)
-    yield from fail_job(redis, stubs.queue, stubs.job_id, b"Exception('We are here')")
+    yield from fail_job(redis, stubs.queue, stubs.job_id, stubs.job_exc_info)
     assert (yield from job_status(redis, stubs.job_id)) == JobStatus.FAILED
 
 
 def test_fail_job_sets_ended_at(redis):
     """Failed job should have ended at time."""
 
-    yield from fail_job(redis, stubs.queue, stubs.job_id, b"Exception('We are here')")
+    yield from fail_job(redis, stubs.queue, stubs.job_id, stubs.job_exc_info)
     ended_at = yield from redis.hget(job_key(stubs.job_id), b'ended_at')
     assert ended_at == utcformat(utcnow())
 
@@ -590,9 +590,9 @@ def test_fail_job_sets_ended_at(redis):
 def test_fail_job_sets_exc_info(redis):
     """Failed job should have exception information."""
 
-    yield from fail_job(redis, stubs.queue, stubs.job_id, b"Exception('We are here')")
+    yield from fail_job(redis, stubs.queue, stubs.job_id, stubs.job_exc_info)
     exc_info = yield from redis.hget(job_key(stubs.job_id), b'exc_info')
-    assert exc_info == b"Exception('We are here')"
+    assert exc_info == stubs.job_exc_info
 
 
 def test_fail_job_removes_from_started_registry(redis):
@@ -603,7 +603,7 @@ def test_fail_job_removes_from_started_registry(redis):
     queue = stored_spec[b'origin']
     timeout = stored_spec[b'timeout']
     yield from start_job(redis, queue, stored_id, timeout)
-    yield from fail_job(redis, stubs.queue, stubs.job_id, b"Exception('We are here')")
+    yield from fail_job(redis, stubs.queue, stubs.job_id, stubs.job_exc_info)
     assert stubs.job_id not in (yield from started_jobs(redis, queue))
 
 
@@ -615,7 +615,7 @@ def test_requeue_job_set_status(redis):
 
     yield from enqueue_job(redis=redis, **stubs.job)
     stored_id, stored_spec = yield from dequeue_job(redis, stubs.queue)
-    yield from fail_job(redis, stubs.queue, stubs.job_id, b"Exception('We are here')")
+    yield from fail_job(redis, stubs.queue, stubs.job_id, stubs.job_exc_info)
     yield from requeue_job(redis, stored_id)
     assert (yield from job_status(redis, stubs.job_id)) == JobStatus.QUEUED
 
@@ -625,7 +625,7 @@ def test_requeue_job_clean_exc_info(redis):
 
     yield from enqueue_job(redis=redis, **stubs.job)
     stored_id, stored_spec = yield from dequeue_job(redis, stubs.queue)
-    yield from fail_job(redis, stubs.queue, stubs.job_id, b"Exception('We are here')")
+    yield from fail_job(redis, stubs.queue, stubs.job_id, stubs.job_exc_info)
     yield from requeue_job(redis, stored_id)
     assert not (yield from redis.hget(job_key(stubs.job_id), b'exc_info'))
 
@@ -635,7 +635,7 @@ def test_requeue_job_enqueue_into_origin(redis):
 
     yield from enqueue_job(redis=redis, **stubs.job)
     stored_id, stored_spec = yield from dequeue_job(redis, stubs.queue)
-    yield from fail_job(redis, stubs.queue, stubs.job_id, b"Exception('We are here')")
+    yield from fail_job(redis, stubs.queue, stubs.job_id, stubs.job_exc_info)
     yield from requeue_job(redis, stored_id)
     assert stubs.job_id in (yield from jobs(redis, stubs.queue))
 
