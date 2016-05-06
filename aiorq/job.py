@@ -193,8 +193,8 @@ class Job:
     def is_started(self):
 
         status = yield from job_status(self.connection, self.id.encode())
-        return status == JobStatus.STARTED
         self.status = status.decode()
+        return status == JobStatus.STARTED
 
     @property
     @asyncio.coroutine
