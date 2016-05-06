@@ -47,6 +47,23 @@ def jobs(redis, queue, start=0, end=-1):
 
 
 @asyncio.coroutine
+def job(redis, id):
+    """Get job hash by job id.
+
+    :type redis: `aioredis.Redis`
+    :type id: bytes
+
+    """
+
+    job_hash = yield from redis.hgetall(job_key(id))
+    if b'timeout' in job_hash:
+        job_hash[b'timeout'] = int(job_hash[b'timeout'])
+    if b'result_ttl' in job_hash:
+        job_hash[b'result_ttl'] = int(job_hash[b'result_ttl'])
+    return job_hash
+
+
+@asyncio.coroutine
 def job_status(redis, id):
     """Get job status.
 
@@ -218,13 +235,10 @@ def dequeue_job(redis, queue):
         job_id = yield from redis.lpop(queue_key(queue))
         if not job_id:
             return None, {}
-        job = yield from redis.hgetall(job_key(job_id))
-        if not job:
+        job_hash = yield from job(redis, job_id)
+        if not job_hash:
             continue
-        job[b'timeout'] = int(job[b'timeout'])
-        if b'result_ttl' in job:
-            job[b'result_ttl'] = int(job[b'result_ttl'])
-        return job_id, job
+        return job_id, job_hash
 
 
 @asyncio.coroutine

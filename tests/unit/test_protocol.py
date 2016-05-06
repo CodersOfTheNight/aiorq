@@ -1,3 +1,5 @@
+import itertools
+
 import pytest
 
 import stubs
@@ -6,13 +8,13 @@ from aiorq.keys import (queues_key, queue_key, failed_queue_key,
                         job_key, started_registry, finished_registry,
                         deferred_registry, workers_key, worker_key,
                         dependents)
-from aiorq.protocol import (queues, jobs, job_status, started_jobs,
-                            finished_jobs, deferred_jobs, empty_queue,
-                            queue_length, enqueue_job, dequeue_job,
-                            cancel_job, start_job, finish_job,
-                            fail_job, requeue_job, workers,
-                            worker_birth, worker_death,
-                            worker_shutdown_requested)
+from aiorq.protocol import (queues, jobs, job, job_status,
+                            started_jobs, finished_jobs,
+                            deferred_jobs, empty_queue, queue_length,
+                            enqueue_job, dequeue_job, cancel_job,
+                            start_job, finish_job, fail_job,
+                            requeue_job, workers, worker_birth,
+                            worker_death, worker_shutdown_requested)
 from aiorq.specs import JobStatus, WorkerStatus
 from aiorq.utils import current_timestamp, utcparse, utcformat, utcnow
 
@@ -44,6 +46,19 @@ def test_jobs_args(redis):
     yield from redis.rpush(queue_key(stubs.queue), b'foo')
     yield from redis.rpush(queue_key(stubs.queue), b'bar')
     assert set((yield from jobs(redis, stubs.queue, 0, 0))) == {b'foo'}
+
+
+# Job.
+
+
+def test_job(redis):
+    """Get job hash by its id."""
+
+    expected = {b'result_ttl': 5000}
+    expected.update({k.encode(): v for k, v in stubs.job.items()})
+    pairs = itertools.chain.from_iterable(expected.items())
+    yield from redis.hmset(job_key(stubs.job_id), *pairs)
+    assert (yield from job(redis, stubs.job_id)) == expected
 
 
 # Job status.
